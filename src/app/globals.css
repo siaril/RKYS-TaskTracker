@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* monday.com-inspired design tokens (light theme). */
+@theme {
+  --color-app: #f6f7fb; /* app background */
+  --color-surface: #ffffff; /* cards / panels */
+  --color-ink: #323338; /* primary text */
+  --color-muted: #676879; /* secondary text */
+  --color-border: #e6e9ef; /* hairline borders */
+  --color-border-strong: #d0d4e4;
+
+  --color-primary: #0073ea; /* monday blue */
+  --color-primary-hover: #0060b9;
+  --color-accent: #6161ff; /* monday purple */
+
+  --color-positive: #00c875; /* done / green */
+  --color-working: #fdab3d; /* in progress / orange */
+  --color-negative: #e2445c; /* stuck / red */
+  --color-neutral: #c4c4c4; /* open / gray */
+
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-app);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
