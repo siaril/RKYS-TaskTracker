@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "predev": "node scripts/predev.mjs",
-    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:raw": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev",
     "kill-dev": "node scripts/predev.mjs",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next build",
     "start": "next start",

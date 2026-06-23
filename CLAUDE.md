@@ -30,13 +30,17 @@ Built phase-by-phase (see `plan` notes); verify each phase before moving on.
 A past "build everything at once" attempt spawned a runaway Node process that ate all RAM
 and crashed the laptop during preview. Never let this recur:
 1. **Build incrementally**, one small phase at a time. Never "one shot."
-2. **Only ONE `npm run dev` at a time.** A `predev` guard (`scripts/predev.mjs`) runs
-   automatically and kills any stale Next dev server before starting a new one, so
-   instances can't stack up and exhaust RAM (the confirmed cause of the past crash).
-   You can also run it manually any time: `npm run kill-dev`.
-3. Dev/build scripts cap the heap via `NODE_OPTIONS=--max-old-space-size=2048` (see package.json).
-   Note: a verified-healthy dev server here peaks ~780 MB. If you ever see it climb past
-   ~2 GB, something is wrong — stop it and debug.
+2. **`npm run dev` runs through a memory-aware supervisor** (`scripts/dev.mjs`). It:
+   - kills any stale Next dev server first (no stacking), and
+   - watches RAM every ~1.5s and **auto-kills the dev server if it exceeds ~3 GB
+     (`DEV_TREE_CAP_MB`) or free system RAM drops below ~800 MB (`DEV_FREE_FLOOR_MB`)** —
+     so the laptop can never OOM-crash again. A healthy server here is ~700–960 MB.
+   - `npm run kill-dev` stops a stray server manually; `npm run dev:raw` bypasses the
+     supervisor (avoid unless debugging).
+3. This machine runs heavy background software (Lenovo Vantage, NVIDIA, Chrome, WhatsApp,
+   Edge WebView2) → little RAM headroom. Close spare Chrome tabs before `npm run dev`.
+4. The heap cap `NODE_OPTIONS=--max-old-space-size=2048` only limits V8 (JS) memory, NOT
+   Turbopack's native memory — that's why the supervisor watches total RAM, not just heap.
 4. Prisma uses a **`globalThis` singleton** (`src/lib/prisma.ts`) — don't bypass it.
 5. **Preview by opening http://localhost:3000 yourself.** If an in-tool preview/browser is
    used, start ONE instance and stop it when done. No repeated/stacked previews.
