@@ -50,6 +50,9 @@ export async function addComment(input: { taskId: string; bodyHtml: string }): P
   await prisma.comment.create({
     data: { taskId: input.taskId, authorId: user.id, bodyHtml },
   });
+  await prisma.taskActivity.create({
+    data: { taskId: input.taskId, userId: user.id, type: "COMMENTED" },
+  });
   revalidatePath(`/projects/${task.projectId}/tasks/${input.taskId}`);
   return {};
 }

@@ -28,6 +28,13 @@ enum TaskPriority {
   URGENT
 }
 
+enum ActivityType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  COMMENTED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -42,6 +49,7 @@ model User {
   ownedTasks    Task[]    @relation("TaskOwner")
   assignedTasks Task[]    @relation("TaskAssignee")
   comments      Comment[]
+  activities    TaskActivity[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -185,10 +193,27 @@ model Task {
   owner    User           @relation("TaskOwner", fields: [ownerId], references: [id])
   tags     TaskTag[]
   comments Comment[]
+  activities TaskActivity[]
 
   @@index([projectId])
   @@index([statusId])
   @@index([assigneeId])
+}
+
+model TaskActivity {
+  id        String       @id @default(cuid())
+  taskId    String
+  userId    String
+  type      ActivityType
+  field     String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime     @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
 }
 
 model Comment {

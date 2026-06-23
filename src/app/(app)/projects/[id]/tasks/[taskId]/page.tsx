@@ -9,6 +9,7 @@ import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge"
 import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
 import { CommentEditor } from "@/components/comments/comment-editor";
+import { ActivityFeed } from "@/components/tasks/activity-feed";
 import { updateTask, deleteTask } from "@/lib/actions/tasks";
 import { deleteComment } from "@/lib/actions/comments";
 import { formatDueDate, toDateInputValue, formatDateTime } from "@/lib/format";
@@ -62,6 +63,12 @@ export default async function TaskDetailPage({
     where: { taskId: task.id },
     orderBy: { createdAt: "asc" },
     include: { author: { select: { id: true, name: true, email: true, image: true } } },
+  });
+
+  const activities = await prisma.taskActivity.findMany({
+    where: { taskId: task.id },
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { name: true, email: true, image: true } } },
   });
 
   const memberOptions = members.map((m) => ({
@@ -195,6 +202,12 @@ export default async function TaskDetailPage({
         </ul>
 
         <CommentEditor taskId={task.id} />
+      </section>
+
+      {/* Activity history */}
+      <section className="mt-8">
+        <h2 className="mb-3 font-semibold text-ink">Activity</h2>
+        <ActivityFeed activities={activities} />
       </section>
     </div>
   );

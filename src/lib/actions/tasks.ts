@@ -5,11 +5,23 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast, type SessionUser } from "@/lib/access";
+import { formatDueDate } from "@/lib/format";
 
 export type FormState = { error?: string } | undefined;
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 type Priority = (typeof PRIORITIES)[number];
+
+function prioLabel(p: string): string {
+  return p.charAt(0) + p.slice(1).toLowerCase();
+}
+
+type ActivityEntry = {
+  type: "CREATED" | "UPDATED" | "STATUS_CHANGED" | "COMMENTED";
+  field?: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+};
 
 function str(v: FormDataEntryValue | null): string {
   return (typeof v === "string" ? v : "").trim();
@@ -90,7 +102,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
   const position = await prisma.task.count({ where: { projectId, statusId } });
   const tagIds = await resolveTagIds(projectId, formData);
 
-  await prisma.task.create({
+  const created = await prisma.task.create({
     data: {
       projectId,
       title,
@@ -102,8 +114,10 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
       dueDate,
       position,
       tags: { create: tagIds.map((tagId) => ({ tagId })) },
+      activities: { create: { userId: user.id, type: "CREATED" } },
     },
   });
+  void created;
 
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}?toast=created`);
@@ -114,9 +128,22 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   const id = str(formData.get("id"));
   if (!id) return { error: "Missing task." };
 
-  const task = await prisma.task.findUnique({ where: { id }, select: { projectId: true } });
-  if (!task) return { error: "Task not found." };
-  if (!(await canEditProject(task.projectId, user))) {
+  const old = await prisma.task.findUnique({
+    where: { id },
+    select: {
+      projectId: true,
+      title: true,
+      description: true,
+      statusId: true,
+      priority: true,
+      assigneeId: true,
+      dueDate: true,
+      status: { select: { name: true } },
+      assignee: { select: { name: true, email: true } },
+    },
+  });
+  if (!old) return { error: "Task not found." };
+  if (!(await canEditProject(old.projectId, user))) {
     return { error: "You don't have permission to edit this task." };
   }
 
@@ -128,13 +155,51 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   const dueDate = parseDate(str(formData.get("dueDate")));
 
   if (!title) return { error: "Title is required." };
-  const status = await prisma.workflowStatus.findFirst({
-    where: { id: statusId, projectId: task.projectId },
-    select: { id: true },
+  const newStatus = await prisma.workflowStatus.findFirst({
+    where: { id: statusId, projectId: old.projectId },
+    select: { id: true, name: true },
   });
-  if (!status) return { error: "Please choose a valid status." };
+  if (!newStatus) return { error: "Please choose a valid status." };
 
-  const tagIds = await resolveTagIds(task.projectId, formData);
+  // Resolve the new assignee's display name for the activity log.
+  let newAssigneeLabel = "Unassigned";
+  if (assigneeId) {
+    const u = await prisma.user.findUnique({
+      where: { id: assigneeId },
+      select: { name: true, email: true },
+    });
+    newAssigneeLabel = u?.name ?? u?.email ?? "Unassigned";
+  }
+  const oldAssigneeLabel = old.assignee?.name ?? old.assignee?.email ?? "Unassigned";
+
+  const acts: ActivityEntry[] = [];
+  if (old.title !== title) {
+    acts.push({ type: "UPDATED", field: "title", oldValue: old.title, newValue: title });
+  }
+  if ((old.description ?? "") !== description) {
+    acts.push({ type: "UPDATED", field: "description" });
+  }
+  if (old.statusId !== statusId) {
+    acts.push({ type: "STATUS_CHANGED", field: "status", oldValue: old.status.name, newValue: newStatus.name });
+  }
+  if (old.priority !== priority) {
+    acts.push({ type: "UPDATED", field: "priority", oldValue: prioLabel(old.priority), newValue: prioLabel(priority) });
+  }
+  if ((old.assigneeId ?? null) !== assigneeId) {
+    acts.push({ type: "UPDATED", field: "assignee", oldValue: oldAssigneeLabel, newValue: newAssigneeLabel });
+  }
+  const oldDueKey = old.dueDate ? old.dueDate.toISOString().slice(0, 10) : null;
+  const newDueKey = dueDate ? dueDate.toISOString().slice(0, 10) : null;
+  if (oldDueKey !== newDueKey) {
+    acts.push({
+      type: "UPDATED",
+      field: "dueDate",
+      oldValue: old.dueDate ? formatDueDate(old.dueDate) : "none",
+      newValue: dueDate ? formatDueDate(dueDate) : "none",
+    });
+  }
+
+  const tagIds = await resolveTagIds(old.projectId, formData);
   await prisma.task.update({
     where: { id },
     data: {
@@ -148,8 +213,21 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
     },
   });
 
-  revalidatePath(`/projects/${task.projectId}`);
-  redirect(`/projects/${task.projectId}?toast=saved`);
+  if (acts.length > 0) {
+    await prisma.taskActivity.createMany({
+      data: acts.map((a) => ({
+        taskId: id,
+        userId: user.id,
+        type: a.type,
+        field: a.field ?? null,
+        oldValue: a.oldValue ?? null,
+        newValue: a.newValue ?? null,
+      })),
+    });
+  }
+
+  revalidatePath(`/projects/${old.projectId}`);
+  redirect(`/projects/${old.projectId}?toast=saved`);
 }
 
 /** Board drag: move a task to another status column (appended to the end). */
@@ -163,23 +241,36 @@ export async function moveTask(input: {
 
   const status = await prisma.workflowStatus.findFirst({
     where: { id: input.toStatusId, projectId: input.projectId },
-    select: { id: true },
+    select: { id: true, name: true },
   });
   if (!status) return;
 
   // Make sure the task belongs to this project before moving it.
   const task = await prisma.task.findFirst({
     where: { id: input.taskId, projectId: input.projectId },
-    select: { id: true },
+    select: { id: true, statusId: true, status: { select: { name: true } } },
   });
   if (!task) return;
+  if (task.statusId === input.toStatusId) return; // no-op
 
   const position = await prisma.task.count({
     where: { projectId: input.projectId, statusId: input.toStatusId },
   });
   await prisma.task.update({
     where: { id: input.taskId },
-    data: { statusId: input.toStatusId, position },
+    data: {
+      statusId: input.toStatusId,
+      position,
+      activities: {
+        create: {
+          userId: user.id,
+          type: "STATUS_CHANGED",
+          field: "status",
+          oldValue: task.status.name,
+          newValue: status.name,
+        },
+      },
+    },
   });
   revalidatePath(`/projects/${input.projectId}`);
 }
