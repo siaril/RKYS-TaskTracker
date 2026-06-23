@@ -89,22 +89,11 @@ export default async function TaskDetailPage({
         <ArrowLeft className="h-4 w-4" /> Back to tasks
       </Link>
 
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <h2 className="text-lg font-semibold text-ink">{canEdit ? "Edit task" : task.title}</h2>
-        {canEdit && (
-          <form action={deleteTask}>
-            <input type="hidden" name="id" value={task.id} />
-            <button
-              type="submit"
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-medium text-muted hover:border-negative hover:bg-negative/10 hover:text-negative"
-            >
-              <Trash2 className="h-4 w-4" /> Delete
-            </button>
-          </form>
-        )}
-      </div>
+      <h2 className="mb-4 text-lg font-semibold text-ink">
+        {canEdit ? "Edit task" : task.title}
+      </h2>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         {/* Details */}
         <div>
       <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
@@ -161,6 +150,17 @@ export default async function TaskDetailPage({
       </div>
 
       <p className="mt-3 text-xs text-muted">Created by {ownerName}</p>
+          {canEdit && (
+            <form action={deleteTask} className="mt-4 border-t border-border pt-4">
+              <input type="hidden" name="id" value={task.id} />
+              <button
+                type="submit"
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-medium text-muted hover:border-negative hover:bg-negative/10 hover:text-negative"
+              >
+                <Trash2 className="h-4 w-4" /> Delete task
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Comments */}
@@ -207,13 +207,13 @@ export default async function TaskDetailPage({
 
         <CommentEditor taskId={task.id} />
         </section>
-      </div>
 
-      {/* Activity history */}
-      <section className="mt-8">
-        <h2 className="mb-3 font-semibold text-ink">Activity</h2>
-        <ActivityFeed activities={activities} />
-      </section>
+        {/* Activity */}
+        <section>
+          <h2 className="mb-3 font-semibold text-ink">Activity</h2>
+          <ActivityFeed activities={activities} />
+        </section>
+      </div>
     </div>
   );
 }
