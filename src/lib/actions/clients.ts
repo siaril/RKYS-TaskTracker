@@ -1,0 +1,57 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/session";
+
+export type FormState = { error?: string; ok?: boolean } | undefined;
+
+function str(v: FormDataEntryValue | null): string {
+  return (typeof v === "string" ? v : "").trim();
+}
+
+function isUniqueViolation(e: unknown): boolean {
+  return (
+    typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002"
+  );
+}
+
+export async function createClient(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
+  const name = str(formData.get("name"));
+  const notes = str(formData.get("notes"));
+  if (!name) return { error: "Name is required." };
+  try {
+    await prisma.client.create({ data: { name, notes: notes || null } });
+  } catch (e) {
+    if (isUniqueViolation(e)) return { error: `A client named "${name}" already exists.` };
+    throw e;
+  }
+  revalidatePath("/clients");
+  return { ok: true };
+}
+
+export async function updateClient(formData: FormData) {
+  await requireUser();
+  const id = str(formData.get("id"));
+  const name = str(formData.get("name"));
+  const notes = str(formData.get("notes"));
+  if (!id || !name) redirect("/clients");
+  try {
+    await prisma.client.update({ where: { id }, data: { name, notes: notes || null } });
+  } catch (e) {
+    if (isUniqueViolation(e)) redirect(`/clients?edit=${id}&error=name-taken`);
+    throw e;
+  }
+  revalidatePath("/clients");
+  redirect("/clients");
+}
+
+export async function deleteClient(formData: FormData) {
+  await requireUser();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await prisma.client.delete({ where: { id } });
+  revalidatePath("/clients");
+}

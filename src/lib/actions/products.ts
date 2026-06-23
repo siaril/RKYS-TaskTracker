@@ -1,0 +1,66 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/session";
+
+export type FormState = { error?: string; ok?: boolean } | undefined;
+
+function str(v: FormDataEntryValue | null): string {
+  return (typeof v === "string" ? v : "").trim();
+}
+
+function isUniqueViolation(e: unknown): boolean {
+  return (
+    typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002"
+  );
+}
+
+const DEFAULT_COLOR = "#0073ea";
+
+export async function createProduct(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireUser();
+  const name = str(formData.get("name"));
+  const description = str(formData.get("description"));
+  const color = str(formData.get("color")) || DEFAULT_COLOR;
+  if (!name) return { error: "Name is required." };
+  try {
+    await prisma.product.create({
+      data: { name, description: description || null, color },
+    });
+  } catch (e) {
+    if (isUniqueViolation(e)) return { error: `A product named "${name}" already exists.` };
+    throw e;
+  }
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function updateProduct(formData: FormData) {
+  await requireUser();
+  const id = str(formData.get("id"));
+  const name = str(formData.get("name"));
+  const description = str(formData.get("description"));
+  const color = str(formData.get("color")) || DEFAULT_COLOR;
+  if (!id || !name) redirect("/products");
+  try {
+    await prisma.product.update({
+      where: { id },
+      data: { name, description: description || null, color },
+    });
+  } catch (e) {
+    if (isUniqueViolation(e)) redirect(`/products?edit=${id}&error=name-taken`);
+    throw e;
+  }
+  revalidatePath("/products");
+  redirect("/products");
+}
+
+export async function deleteProduct(formData: FormData) {
+  await requireUser();
+  const id = str(formData.get("id"));
+  if (!id) return;
+  await prisma.product.delete({ where: { id } });
+  revalidatePath("/products");
+}

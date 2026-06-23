@@ -1,14 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LayoutDashboard, FolderKanban, Building2, Boxes } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, ready: true },
   { label: "Projects", href: "/projects", icon: FolderKanban, ready: false },
-  { label: "Clients", href: "/clients", icon: Building2, ready: false },
-  { label: "Products", href: "/products", icon: Boxes, ready: false },
+  { label: "Clients", href: "/clients", icon: Building2, ready: true },
+  { label: "Products", href: "/products", icon: Boxes, ready: true },
 ];
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="flex h-14 items-center gap-2 border-b border-border px-5">
@@ -37,11 +43,17 @@ export function Sidebar() {
               </span>
             );
           }
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.label}
               href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-app"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-ink hover:bg-app",
+              )}
             >
               <Icon className="h-[18px] w-[18px]" />
               {item.label}
