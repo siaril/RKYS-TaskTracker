@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast } from "@/lib/access";
@@ -116,6 +116,7 @@ export default async function TaskDetailPage({
             }}
             submitLabel="Save changes"
             cancelHref={`/projects/${id}`}
+            deleteAction={deleteTask}
           />
         ) : (
           <div className="space-y-4">
@@ -150,17 +151,6 @@ export default async function TaskDetailPage({
       </div>
 
       <p className="mt-3 text-xs text-muted">Created by {ownerName}</p>
-          {canEdit && (
-            <form action={deleteTask} className="mt-4 border-t border-border pt-4">
-              <input type="hidden" name="id" value={task.id} />
-              <button
-                type="submit"
-                className="flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-medium text-muted hover:border-negative hover:bg-negative/10 hover:text-negative"
-              >
-                <Trash2 className="h-4 w-4" /> Delete task
-              </button>
-            </form>
-          )}
         </div>
 
         {/* Comments */}

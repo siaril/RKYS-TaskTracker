@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import type { FormState } from "@/lib/actions/tasks";
 import { TagInput } from "@/components/tasks/tag-input";
 
@@ -27,6 +28,7 @@ type Props = {
   };
   submitLabel: string;
   cancelHref: string;
+  deleteAction?: (formData: FormData) => void | Promise<void>;
 };
 
 const inputCls =
@@ -41,6 +43,7 @@ export function TaskForm({
   defaults,
   submitLabel,
   cancelHref,
+  deleteAction,
 }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
   const selectedTags = new Set(defaults?.tagIds ?? []);
@@ -157,6 +160,16 @@ export function TaskForm({
         >
           Cancel
         </Link>
+        {defaults?.id && deleteAction && (
+          <button
+            type="submit"
+            formAction={deleteAction}
+            formNoValidate
+            className="ml-auto flex h-10 items-center gap-1.5 rounded-lg bg-negative px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <Trash2 className="h-4 w-4" /> Delete task
+          </button>
+        )}
       </div>
     </form>
   );
