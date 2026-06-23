@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { googleSignIn } from "@/lib/actions/auth";
@@ -14,13 +15,28 @@ export default async function SignInPage({
   const { error } = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app px-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-8 shadow-sm">
+    <div className="relative flex min-h-screen items-center justify-center px-4">
+      <Image
+        src="/login-bg.webp"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover"
+      />
+      <div className="absolute inset-0 bg-black/30" />
+
+      <div className="relative w-full max-w-sm rounded-2xl border border-white/20 bg-white/95 p-8 shadow-2xl backdrop-blur">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-lg font-bold text-white">
-            T
-          </div>
-          <h1 className="text-xl font-bold text-ink">Welcome to TaskTracker</h1>
+          <Image
+            src="/rekayasa-logo.png"
+            alt="Rekayasa Analisa Digital"
+            width={480}
+            height={415}
+            priority
+            className="mb-3 h-auto w-40"
+          />
+          <h1 className="text-xl font-bold text-ink">Welcome to Rekayasa Task Trackers</h1>
           <p className="mt-1 text-sm text-muted">
             Sign in to manage your team&apos;s projects and tasks.
           </p>
