@@ -30,8 +30,13 @@ Built phase-by-phase (see `plan` notes); verify each phase before moving on.
 A past "build everything at once" attempt spawned a runaway Node process that ate all RAM
 and crashed the laptop during preview. Never let this recur:
 1. **Build incrementally**, one small phase at a time. Never "one shot."
-2. **Only ONE `npm run dev` at a time.** Kill stray Node first: `taskkill /F /IM node.exe`.
+2. **Only ONE `npm run dev` at a time.** A `predev` guard (`scripts/predev.mjs`) runs
+   automatically and kills any stale Next dev server before starting a new one, so
+   instances can't stack up and exhaust RAM (the confirmed cause of the past crash).
+   You can also run it manually any time: `npm run kill-dev`.
 3. Dev/build scripts cap the heap via `NODE_OPTIONS=--max-old-space-size=2048` (see package.json).
+   Note: a verified-healthy dev server here peaks ~780 MB. If you ever see it climb past
+   ~2 GB, something is wrong — stop it and debug.
 4. Prisma uses a **`globalThis` singleton** (`src/lib/prisma.ts`) — don't bypass it.
 5. **Preview by opening http://localhost:3000 yourself.** If an in-tool preview/browser is
    used, start ONE instance and stop it when done. No repeated/stacked previews.
