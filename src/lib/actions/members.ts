@@ -34,7 +34,7 @@ export async function addMember(formData: FormData) {
     create: { projectId, userId, role },
   });
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?toast=saved`);
+  redirect(`/projects/${projectId}/settings?toast=saved`);
 }
 
 export async function updateMemberRole(formData: FormData) {
@@ -47,7 +47,7 @@ export async function updateMemberRole(formData: FormData) {
 
   // Don't allow demoting the last remaining owner.
   if (role !== "OWNER" && (await isLastOwner(projectId, userId))) {
-    redirect(`/projects/${projectId}?error=last-owner`);
+    redirect(`/projects/${projectId}/settings?error=last-owner`);
   }
 
   await prisma.projectMember.update({
@@ -55,7 +55,7 @@ export async function updateMemberRole(formData: FormData) {
     data: { role },
   });
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?toast=saved`);
+  redirect(`/projects/${projectId}/settings?toast=saved`);
 }
 
 export async function removeMember(formData: FormData) {
@@ -66,14 +66,14 @@ export async function removeMember(formData: FormData) {
   if (!(await canManage(projectId, user))) redirect(`/projects/${projectId}`);
 
   if (await isLastOwner(projectId, userId)) {
-    redirect(`/projects/${projectId}?error=last-owner`);
+    redirect(`/projects/${projectId}/settings?error=last-owner`);
   }
 
   await prisma.projectMember.delete({
     where: { projectId_userId: { projectId, userId } },
   });
   revalidatePath(`/projects/${projectId}`);
-  redirect(`/projects/${projectId}?toast=saved`);
+  redirect(`/projects/${projectId}/settings?toast=saved`);
 }
 
 async function isLastOwner(projectId: string, userId: string): Promise<boolean> {

@@ -1,244 +1,123 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2, X, ShieldCheck } from "lucide-react";
+import { Plus, CalendarDays, ListTodo } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast } from "@/lib/access";
-import { ProjectForm } from "@/components/projects/project-form";
-import { ProductChips } from "@/components/projects/product-chips";
-import { MemberRoleSelect } from "@/components/projects/member-role-select";
-import { FlashToast } from "@/components/flash-toast";
+import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
 import { Avatar } from "@/components/avatar";
-import { updateProject, deleteProject } from "@/lib/actions/projects";
-import { addMember, updateMemberRole, removeMember } from "@/lib/actions/members";
+import { FlashToast } from "@/components/flash-toast";
+import { formatDueDate } from "@/lib/format";
 
-export default async function ProjectDetailPage({
+export default async function ProjectTasksPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ toast?: string; error?: string }>;
+  searchParams: Promise<{ toast?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
   const user = await requireUser();
 
-  const project = await prisma.project.findUnique({
-    where: { id },
-    include: {
-      client: true,
-      createdBy: { select: { name: true, email: true } },
-      products: { include: { product: true } },
-      members: {
-        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-        include: { user: { select: { id: true, name: true, email: true, image: true } } },
-      },
-    },
-  });
-  if (!project) notFound();
-
   const access = await getProjectAccess(id, user);
-  if (!access) notFound(); // hide existence from non-members
-
+  if (!access) notFound();
   const canEdit = atLeast(access.role, "EDITOR");
-  const canManage = atLeast(access.role, "OWNER");
-  const owner = project.createdBy.name ?? project.createdBy.email ?? "Unknown";
 
-  const memberUserIds = project.members.map((m) => m.userId);
-  const [clients, products, addableUsers] = await Promise.all([
-    canEdit
-      ? prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } })
-      : Promise.resolve([]),
-    canEdit
-      ? prisma.product.findMany({
-          orderBy: { name: "asc" },
-          select: { id: true, name: true, color: true },
-        })
-      : Promise.resolve([]),
-    canManage
-      ? prisma.user.findMany({
-          where: { id: { notIn: memberUserIds } },
-          orderBy: { name: "asc" },
-          select: { id: true, name: true, email: true },
-        })
-      : Promise.resolve([]),
+  const [statuses, tasks] = await Promise.all([
+    prisma.workflowStatus.findMany({
+      where: { projectId: id },
+      orderBy: { position: "asc" },
+    }),
+    prisma.task.findMany({
+      where: { projectId: id },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      include: { assignee: { select: { name: true, email: true, image: true } } },
+    }),
   ]);
 
+  const byStatus = new Map<string, typeof tasks>();
+  for (const s of statuses) byStatus.set(s.id, []);
+  for (const t of tasks) byStatus.get(t.statusId)?.push(t);
+
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <FlashToast type={sp.toast} />
 
-      <Link
-        href="/projects"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to projects
-      </Link>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-muted">
+          {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+        </p>
+        {canEdit && (
+          <Link
+            href={`/projects/${id}/tasks/new`}
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+          >
+            <Plus className="h-4 w-4" /> New task
+          </Link>
+        )}
+      </div>
 
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">{project.name}</h1>
-          <p className="mt-1 flex items-center gap-2 text-sm text-muted">
-            {project.client.name} · created by {owner}
-            <span className="inline-flex items-center gap-1 rounded-full bg-app px-2 py-0.5 text-xs font-semibold text-muted">
-              <ShieldCheck className="h-3 w-3" />
-              {access.isAdmin ? "Admin" : access.role.charAt(0) + access.role.slice(1).toLowerCase()}
-            </span>
+      {tasks.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border-strong p-10 text-center">
+          <ListTodo className="mx-auto h-8 w-8 text-muted" />
+          <p className="mt-2 text-sm text-muted">
+            No tasks yet.{canEdit ? " Add the first one." : ""}
           </p>
         </div>
-        {canManage && (
-          <form action={deleteProject}>
-            <input type="hidden" name="id" value={project.id} />
-            <button
-              type="submit"
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-medium text-muted hover:border-negative hover:bg-negative/10 hover:text-negative"
-            >
-              <Trash2 className="h-4 w-4" /> Delete
-            </button>
-          </form>
-        )}
-      </div>
+      ) : (
+        <div className="space-y-6">
+          {statuses.map((s) => {
+            const list = byStatus.get(s.id) ?? [];
+            return (
+              <section key={s.id}>
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  {s.name}
+                  <span className="font-normal text-muted">({list.length})</span>
+                </h3>
 
-      {sp.error === "last-owner" && (
-        <p className="mb-4 rounded-lg bg-negative/10 px-4 py-2 text-sm text-negative">
-          A project must keep at least one owner.
-        </p>
+                {list.length === 0 ? (
+                  <p className="pl-4 text-xs text-muted">No tasks</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {list.map((t) => {
+                      const assigneeName = t.assignee?.name ?? t.assignee?.email ?? null;
+                      return (
+                        <li key={t.id}>
+                          <Link
+                            href={`/projects/${id}/tasks/${t.id}`}
+                            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
+                          >
+                            <span className="truncate text-sm font-medium text-ink">{t.title}</span>
+                            <div className="flex shrink-0 items-center gap-3">
+                              {t.dueDate && (
+                                <span className="flex items-center gap-1 text-xs text-muted">
+                                  <CalendarDays className="h-3.5 w-3.5" />
+                                  {formatDueDate(t.dueDate)}
+                                </span>
+                              )}
+                              <PriorityBadge priority={t.priority as Priority} />
+                              {assigneeName ? (
+                                <Avatar src={t.assignee?.image} name={assigneeName} size={24} />
+                              ) : (
+                                <span className="text-xs text-muted">—</span>
+                              )}
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+        </div>
       )}
-
-      {/* Details / edit */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        {canEdit ? (
-          <ProjectForm
-            action={updateProject}
-            clients={clients}
-            products={products}
-            defaults={{
-              id: project.id,
-              name: project.name,
-              description: project.description ?? "",
-              clientId: project.clientId,
-              productIds: project.products.map((p) => p.productId),
-            }}
-            submitLabel="Save changes"
-            cancelHref="/projects"
-          />
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Description</p>
-              <p className="mt-1 text-sm text-ink">
-                {project.description || <span className="text-muted">No description</span>}
-              </p>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                Products
-              </p>
-              <ProductChips
-                products={project.products.map((pp) => ({
-                  name: pp.product.name,
-                  color: pp.product.color,
-                }))}
-              />
-            </div>
-            <p className="text-xs text-muted">You have view-only access to this project.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Members */}
-      <section className="mt-6 rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="mb-4 font-semibold text-ink">
-          Members <span className="text-muted">({project.members.length})</span>
-        </h2>
-
-        <ul className="space-y-2">
-          {project.members.map((m) => (
-            <li key={m.userId} className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar src={m.user.image} name={m.user.name ?? m.user.email ?? "User"} size={32} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">
-                    {m.user.name ?? m.user.email}
-                    {m.userId === user.id && <span className="text-muted"> (you)</span>}
-                  </p>
-                  <p className="truncate text-xs text-muted">{m.user.email}</p>
-                </div>
-              </div>
-
-              {canManage ? (
-                <div className="flex shrink-0 items-center gap-2">
-                  <form action={updateMemberRole}>
-                    <input type="hidden" name="projectId" value={project.id} />
-                    <input type="hidden" name="userId" value={m.userId} />
-                    <MemberRoleSelect defaultValue={m.role} />
-                  </form>
-                  <form action={removeMember}>
-                    <input type="hidden" name="projectId" value={project.id} />
-                    <input type="hidden" name="userId" value={m.userId} />
-                    <button
-                      type="submit"
-                      aria-label="Remove member"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-negative/10 hover:text-negative"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <span className="shrink-0 rounded-full bg-app px-2.5 py-1 text-xs font-medium text-muted">
-                  {m.role.charAt(0) + m.role.slice(1).toLowerCase()}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-
-        {canManage && (
-          <div className="mt-4 border-t border-border pt-4">
-            {addableUsers.length === 0 ? (
-              <p className="text-sm text-muted">
-                Everyone with an account is already a member. People appear here once they sign in
-                for the first time.
-              </p>
-            ) : (
-              <form action={addMember} className="flex flex-col gap-2 sm:flex-row">
-                <input type="hidden" name="projectId" value={project.id} />
-                <select
-                  name="userId"
-                  required
-                  defaultValue=""
-                  className="h-10 flex-1 rounded-lg border border-border-strong bg-white px-3 text-sm outline-none focus:border-primary"
-                >
-                  <option value="" disabled>
-                    Add a person…
-                  </option>
-                  {addableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name ?? u.email}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="role"
-                  defaultValue="EDITOR"
-                  className="h-10 rounded-lg border border-border-strong bg-white px-3 text-sm outline-none focus:border-primary"
-                >
-                  <option value="OWNER">Owner</option>
-                  <option value="EDITOR">Editor</option>
-                  <option value="VIEWER">Viewer</option>
-                </select>
-                <button
-                  type="submit"
-                  className="flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
-                >
-                  Add
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
