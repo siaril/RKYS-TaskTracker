@@ -31,10 +31,10 @@ export default async function SignInPage({
           <Image
             src="/rekayasa-logo.png"
             alt="Rekayasa Analisa Digital"
-            width={480}
-            height={415}
+            width={285}
+            height={184}
             priority
-            className="mb-3 h-auto w-40"
+            className="mb-3 h-auto w-44"
           />
           <h1 className="text-xl font-bold text-ink">Welcome to Rekayasa Task Trackers</h1>
           <p className="mt-1 text-sm text-muted">
