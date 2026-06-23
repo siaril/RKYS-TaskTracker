@@ -6,12 +6,14 @@ import type { FormState } from "@/lib/actions/tasks";
 
 type Status = { id: string; name: string; color: string };
 type Member = { id: string; name: string | null; email: string | null };
+type Tag = { id: string; name: string; color: string };
 
 type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   projectId: string;
   statuses: Status[];
   members: Member[];
+  tags: Tag[];
   defaults?: {
     id?: string;
     title?: string;
@@ -20,6 +22,7 @@ type Props = {
     priority?: string;
     assigneeId?: string;
     dueDate?: string; // yyyy-mm-dd
+    tagIds?: string[];
   };
   submitLabel: string;
   cancelHref: string;
@@ -33,11 +36,13 @@ export function TaskForm({
   projectId,
   statuses,
   members,
+  tags,
   defaults,
   submitLabel,
   cancelHref,
 }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
+  const selectedTags = new Set(defaults?.tagIds ?? []);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -123,6 +128,36 @@ export function TaskForm({
             className={`${inputCls} bg-white`}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-semibold text-ink">Tags</label>
+        {tags.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {tags.map((t) => (
+              <label
+                key={t.id}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong px-2.5 py-1 text-xs font-medium text-ink hover:bg-app has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+              >
+                <input
+                  type="checkbox"
+                  name="tags"
+                  value={t.id}
+                  defaultChecked={selectedTags.has(t.id)}
+                  className="accent-primary"
+                />
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
+                {t.name}
+              </label>
+            ))}
+          </div>
+        )}
+        <input
+          name="newTags"
+          maxLength={200}
+          placeholder="Add new tags, comma-separated (e.g. bug, frontend)"
+          className={inputCls}
+        />
       </div>
 
       {state?.error && <p className="text-sm text-negative">{state.error}</p>}

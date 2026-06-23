@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast } from "@/lib/access";
 import { TaskForm } from "@/components/tasks/task-form";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
+import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
 import { updateTask, deleteTask } from "@/lib/actions/tasks";
 import { formatDueDate, toDateInputValue } from "@/lib/format";
@@ -28,11 +29,12 @@ export default async function TaskDetailPage({
       status: true,
       assignee: { select: { name: true, email: true, image: true } },
       owner: { select: { name: true, email: true } },
+      tags: { include: { tag: true } },
     },
   });
   if (!task) notFound();
 
-  const [statuses, members] = await Promise.all([
+  const [statuses, members, projectTags] = await Promise.all([
     canEdit
       ? prisma.workflowStatus.findMany({
           where: { projectId: id },
@@ -44,6 +46,13 @@ export default async function TaskDetailPage({
       ? prisma.projectMember.findMany({
           where: { projectId: id },
           include: { user: { select: { id: true, name: true, email: true } } },
+        })
+      : Promise.resolve([]),
+    canEdit
+      ? prisma.tag.findMany({
+          where: { projectId: id },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, color: true },
         })
       : Promise.resolve([]),
   ]);
@@ -86,6 +95,7 @@ export default async function TaskDetailPage({
             projectId={id}
             statuses={statuses}
             members={memberOptions}
+            tags={projectTags}
             defaults={{
               id: task.id,
               title: task.title,
@@ -94,6 +104,7 @@ export default async function TaskDetailPage({
               priority: task.priority,
               assigneeId: task.assigneeId ?? "",
               dueDate: task.dueDate ? toDateInputValue(task.dueDate) : "",
+              tagIds: task.tags.map((tt) => tt.tagId),
             }}
             submitLabel="Save changes"
             cancelHref={`/projects/${id}`}
@@ -122,6 +133,9 @@ export default async function TaskDetailPage({
                 </span>
               )}
             </div>
+            {task.tags.length > 0 && (
+              <TagChips tags={task.tags.map((tt) => ({ name: tt.tag.name, color: tt.tag.color }))} />
+            )}
             <p className="text-xs text-muted">You have view-only access to this project.</p>
           </div>
         )}

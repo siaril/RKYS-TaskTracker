@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
+import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
 import { formatDueDate } from "@/lib/format";
 import { moveTask } from "@/lib/actions/tasks";
@@ -29,6 +30,7 @@ export type BoardTask = {
   priority: Priority;
   dueDate: string | null; // ISO string
   assignee: { name: string; image: string | null } | null;
+  tags: { name: string; color: string }[];
 };
 type Status = { id: string; name: string; color: string };
 
@@ -188,6 +190,11 @@ function CardShell({
       )}
     >
       <p className="text-sm font-medium text-ink">{task.title}</p>
+      {task.tags.length > 0 && (
+        <div className="mt-1.5">
+          <TagChips tags={task.tags} />
+        </div>
+      )}
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <PriorityBadge priority={task.priority} />

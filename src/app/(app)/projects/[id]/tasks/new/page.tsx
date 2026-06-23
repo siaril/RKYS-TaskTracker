@@ -14,7 +14,7 @@ export default async function NewTaskPage({ params }: { params: Promise<{ id: st
   const access = await getProjectAccess(id, user);
   if (!access || !atLeast(access.role, "EDITOR")) notFound();
 
-  const [statuses, members] = await Promise.all([
+  const [statuses, members, tags] = await Promise.all([
     prisma.workflowStatus.findMany({
       where: { projectId: id },
       orderBy: { position: "asc" },
@@ -23,6 +23,11 @@ export default async function NewTaskPage({ params }: { params: Promise<{ id: st
     prisma.projectMember.findMany({
       where: { projectId: id },
       include: { user: { select: { id: true, name: true, email: true } } },
+    }),
+    prisma.tag.findMany({
+      where: { projectId: id },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
     }),
   ]);
   const memberOptions = members.map((m) => ({
@@ -46,6 +51,7 @@ export default async function NewTaskPage({ params }: { params: Promise<{ id: st
           projectId={id}
           statuses={statuses}
           members={memberOptions}
+          tags={tags}
           submitLabel="Create task"
           cancelHref={`/projects/${id}`}
         />

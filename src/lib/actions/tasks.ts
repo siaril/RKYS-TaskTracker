@@ -23,6 +23,51 @@ function parseDate(v: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+const TAG_PALETTE = [
+  "#0073ea", "#00c875", "#fdab3d", "#a25ddc", "#e2445c",
+  "#579bfc", "#00c2ff", "#ff7575", "#7e5bef", "#16a34a",
+];
+function colorForTag(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return TAG_PALETTE[h % TAG_PALETTE.length];
+}
+
+/** Resolve selected existing tag ids + newly-typed tag names into tag ids,
+ *  creating any new tags for the project. */
+async function resolveTagIds(
+  projectId: string,
+  formData: FormData,
+): Promise<string[]> {
+  const selected = formData
+    .getAll("tags")
+    .map((v) => (typeof v === "string" ? v : ""))
+    .filter(Boolean);
+  const newNames = str(formData.get("newTags"))
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+
+  const ids = new Set<string>();
+  if (selected.length) {
+    const existing = await prisma.tag.findMany({
+      where: { projectId, id: { in: selected } },
+      select: { id: true },
+    });
+    for (const t of existing) ids.add(t.id);
+  }
+  for (const name of newNames) {
+    const tag = await prisma.tag.upsert({
+      where: { projectId_name: { projectId, name } },
+      update: {},
+      create: { projectId, name, color: colorForTag(name) },
+      select: { id: true },
+    });
+    ids.add(tag.id);
+  }
+  return [...ids];
+}
+
 async function canEditProject(projectId: string, user: SessionUser): Promise<boolean> {
   const access = await getProjectAccess(projectId, user);
   return !!access && atLeast(access.role, "EDITOR");
@@ -52,6 +97,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
   if (!status) return { error: "Please choose a valid status." };
 
   const position = await prisma.task.count({ where: { projectId, statusId } });
+  const tagIds = await resolveTagIds(projectId, formData);
 
   await prisma.task.create({
     data: {
@@ -64,6 +110,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
       ownerId: user.id,
       dueDate,
       position,
+      tags: { create: tagIds.map((tagId) => ({ tagId })) },
     },
   });
 
@@ -96,9 +143,18 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   });
   if (!status) return { error: "Please choose a valid status." };
 
+  const tagIds = await resolveTagIds(task.projectId, formData);
   await prisma.task.update({
     where: { id },
-    data: { title, description: description || null, statusId, priority, assigneeId, dueDate },
+    data: {
+      title,
+      description: description || null,
+      statusId,
+      priority,
+      assigneeId,
+      dueDate,
+      tags: { deleteMany: {}, create: tagIds.map((tagId) => ({ tagId })) },
+    },
   });
 
   revalidatePath(`/projects/${task.projectId}`);
