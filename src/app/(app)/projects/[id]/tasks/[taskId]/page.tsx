@@ -8,8 +8,10 @@ import { TaskForm } from "@/components/tasks/task-form";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
 import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
+import { CommentEditor } from "@/components/comments/comment-editor";
 import { updateTask, deleteTask } from "@/lib/actions/tasks";
-import { formatDueDate, toDateInputValue } from "@/lib/format";
+import { deleteComment } from "@/lib/actions/comments";
+import { formatDueDate, toDateInputValue, formatDateTime } from "@/lib/format";
 
 export default async function TaskDetailPage({
   params,
@@ -56,6 +58,12 @@ export default async function TaskDetailPage({
         })
       : Promise.resolve([]),
   ]);
+  const comments = await prisma.comment.findMany({
+    where: { taskId: task.id },
+    orderBy: { createdAt: "asc" },
+    include: { author: { select: { id: true, name: true, email: true, image: true } } },
+  });
+
   const memberOptions = members.map((m) => ({
     id: m.user.id,
     name: m.user.name,
@@ -63,6 +71,7 @@ export default async function TaskDetailPage({
   }));
   const ownerName = task.owner.name ?? task.owner.email ?? "Unknown";
   const assigneeName = task.assignee?.name ?? task.assignee?.email ?? null;
+  const canModerate = atLeast(access.role, "OWNER");
 
   return (
     <div className="max-w-2xl">
@@ -142,6 +151,51 @@ export default async function TaskDetailPage({
       </div>
 
       <p className="mt-3 text-xs text-muted">Created by {ownerName}</p>
+
+      {/* Comments */}
+      <section className="mt-8">
+        <h2 className="mb-3 font-semibold text-ink">
+          Comments <span className="font-normal text-muted">({comments.length})</span>
+        </h2>
+
+        <ul className="mb-4 space-y-4">
+          {comments.length === 0 && (
+            <li className="text-sm text-muted">No comments yet. Start the discussion.</li>
+          )}
+          {comments.map((c) => {
+            const authorName = c.author.name ?? c.author.email ?? "User";
+            const canDelete = c.author.id === user.id || canModerate;
+            return (
+              <li key={c.id} className="flex gap-3">
+                <Avatar src={c.author.image} name={authorName} size={32} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-ink">{authorName}</span>
+                    <span className="text-xs text-muted">{formatDateTime(c.createdAt)}</span>
+                    {canDelete && (
+                      <form action={deleteComment} className="ml-auto">
+                        <input type="hidden" name="id" value={c.id} />
+                        <button
+                          type="submit"
+                          className="text-xs text-muted hover:text-negative"
+                        >
+                          Delete
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                  <div
+                    className="comment-html mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
+                    dangerouslySetInnerHTML={{ __html: c.bodyHtml }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <CommentEditor taskId={task.id} />
+      </section>
     </div>
   );
 }
