@@ -2,15 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderKanban, Building2, Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, ready: true },
-  { label: "Projects", href: "/projects", icon: FolderKanban, ready: true },
-  { label: "Clients", href: "/clients", icon: Building2, ready: true },
-  { label: "Products", href: "/products", icon: Boxes, ready: true },
-];
+import { navItems, isNavActive } from "@/components/nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -27,32 +20,14 @@ export function Sidebar() {
       <nav className="flex flex-col gap-1 p-3">
         {navItems.map((item) => {
           const Icon = item.icon;
-          if (!item.ready) {
-            return (
-              <span
-                key={item.label}
-                className="flex cursor-default items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-muted/60"
-              >
-                <span className="flex items-center gap-3">
-                  <Icon className="h-[18px] w-[18px]" />
-                  {item.label}
-                </span>
-                <span className="rounded bg-app px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  soon
-                </span>
-              </span>
-            );
-          }
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = isNavActive(pathname, item.href);
           return (
             <Link
               key={item.label}
               href={item.href}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary/10 text-primary"
-                  : "text-ink hover:bg-app",
+                active ? "bg-primary/10 text-primary" : "text-ink hover:bg-app",
               )}
             >
               <Icon className="h-[18px] w-[18px]" />

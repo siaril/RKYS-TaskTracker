@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/sidebar";
+import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
 import { requireUser } from "@/lib/session";
 
@@ -15,9 +16,7 @@ export default async function AppLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-white md:hidden">
-              T
-            </div>
+            <MobileNav />
             <span className="text-sm font-semibold text-muted">Workspace</span>
           </div>
           <UserMenu

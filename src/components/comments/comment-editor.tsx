@@ -41,7 +41,7 @@ export function CommentEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
       Image,
       Link.configure({ openOnClick: false, autolink: true }),
     ],
