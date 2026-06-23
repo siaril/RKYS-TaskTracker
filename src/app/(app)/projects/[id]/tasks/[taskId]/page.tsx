@@ -56,7 +56,7 @@ export default async function TaskDetailPage({
   const assigneeName = task.assignee?.name ?? task.assignee?.email ?? null;
 
   return (
-    <div>
+    <div className="max-w-2xl">
       <Link
         href={`/projects/${id}`}
         className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"

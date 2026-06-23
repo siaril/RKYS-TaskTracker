@@ -105,6 +105,38 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   redirect(`/projects/${task.projectId}?toast=saved`);
 }
 
+/** Board drag: move a task to another status column (appended to the end). */
+export async function moveTask(input: {
+  taskId: string;
+  projectId: string;
+  toStatusId: string;
+}): Promise<void> {
+  const user = await requireUser();
+  if (!(await canEditProject(input.projectId, user))) return;
+
+  const status = await prisma.workflowStatus.findFirst({
+    where: { id: input.toStatusId, projectId: input.projectId },
+    select: { id: true },
+  });
+  if (!status) return;
+
+  // Make sure the task belongs to this project before moving it.
+  const task = await prisma.task.findFirst({
+    where: { id: input.taskId, projectId: input.projectId },
+    select: { id: true },
+  });
+  if (!task) return;
+
+  const position = await prisma.task.count({
+    where: { projectId: input.projectId, statusId: input.toStatusId },
+  });
+  await prisma.task.update({
+    where: { id: input.taskId },
+    data: { statusId: input.toStatusId, position },
+  });
+  revalidatePath(`/projects/${input.projectId}`);
+}
+
 export async function deleteTask(formData: FormData) {
   const user = await requireUser();
   const id = str(formData.get("id"));

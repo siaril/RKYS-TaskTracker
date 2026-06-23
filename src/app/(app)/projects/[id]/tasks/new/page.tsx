@@ -32,7 +32,7 @@ export default async function NewTaskPage({ params }: { params: Promise<{ id: st
   }));
 
   return (
-    <div>
+    <div className="max-w-2xl">
       <Link
         href={`/projects/${id}`}
         className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"

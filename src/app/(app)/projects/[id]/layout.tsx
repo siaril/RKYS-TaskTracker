@@ -30,7 +30,7 @@ export default async function ProjectLayout({
     : access.role.charAt(0) + access.role.slice(1).toLowerCase();
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <Link
         href="/projects"
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, ChevronUp, ChevronDown, Check, Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast } from "@/lib/access";
@@ -10,6 +10,7 @@ import { FlashToast } from "@/components/flash-toast";
 import { Avatar } from "@/components/avatar";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
 import { addMember, updateMemberRole, removeMember } from "@/lib/actions/members";
+import { createStatus, updateStatus, deleteStatus, moveStatus } from "@/lib/actions/statuses";
 
 export default async function ProjectSettingsPage({
   params,
@@ -30,6 +31,7 @@ export default async function ProjectSettingsPage({
         orderBy: [{ role: "asc" }, { createdAt: "asc" }],
         include: { user: { select: { id: true, name: true, email: true, image: true } } },
       },
+      statuses: { orderBy: { position: "asc" } },
     },
   });
   if (!project) notFound();
@@ -61,7 +63,7 @@ export default async function ProjectSettingsPage({
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-3xl space-y-6">
       <FlashToast type={sp.toast} />
 
       {sp.error === "last-owner" && (
@@ -197,6 +199,125 @@ export default async function ProjectSettingsPage({
           </div>
         )}
       </section>
+
+      {/* Workflow */}
+      {canManage && (
+        <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="font-semibold text-ink">Workflow</h2>
+          <p className="mt-1 mb-4 text-sm text-muted">
+            The status columns tasks move through, in order.
+          </p>
+
+          {sp.error === "status-in-use" && (
+            <p className="mb-3 rounded-lg bg-negative/10 px-4 py-2 text-sm text-negative">
+              Move its tasks to another status before deleting it.
+            </p>
+          )}
+          {sp.error === "last-status" && (
+            <p className="mb-3 rounded-lg bg-negative/10 px-4 py-2 text-sm text-negative">
+              A project needs at least one status.
+            </p>
+          )}
+          {sp.error === "status-name" && (
+            <p className="mb-3 rounded-lg bg-negative/10 px-4 py-2 text-sm text-negative">
+              Status name is required.
+            </p>
+          )}
+
+          <ul className="space-y-2">
+            {project.statuses.map((s, i) => (
+              <li key={s.id} className="flex items-center gap-2">
+                <form action={updateStatus} className="flex flex-1 items-center gap-2">
+                  <input type="hidden" name="id" value={s.id} />
+                  <input
+                    type="color"
+                    name="color"
+                    defaultValue={s.color}
+                    aria-label="Status color"
+                    className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-white p-1"
+                  />
+                  <input
+                    name="name"
+                    defaultValue={s.name}
+                    maxLength={50}
+                    required
+                    className="h-9 flex-1 rounded-lg border border-border-strong px-3 text-sm outline-none focus:border-primary"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Save status"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-app hover:text-primary"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                </form>
+
+                <form action={moveStatus}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <input type="hidden" name="direction" value="up" />
+                  <button
+                    type="submit"
+                    disabled={i === 0}
+                    aria-label="Move up"
+                    className="flex h-9 w-8 items-center justify-center rounded-lg text-muted hover:bg-app disabled:opacity-30"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                </form>
+                <form action={moveStatus}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <input type="hidden" name="direction" value="down" />
+                  <button
+                    type="submit"
+                    disabled={i === project.statuses.length - 1}
+                    aria-label="Move down"
+                    className="flex h-9 w-8 items-center justify-center rounded-lg text-muted hover:bg-app disabled:opacity-30"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </form>
+                <form action={deleteStatus}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <button
+                    type="submit"
+                    aria-label="Delete status"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-negative/10 hover:text-negative"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+
+          <form
+            action={createStatus}
+            className="mt-4 flex items-center gap-2 border-t border-border pt-4"
+          >
+            <input type="hidden" name="projectId" value={project.id} />
+            <input
+              type="color"
+              name="color"
+              defaultValue="#c4c4c4"
+              aria-label="New status color"
+              className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-white p-1"
+            />
+            <input
+              name="name"
+              required
+              maxLength={50}
+              placeholder="New status name"
+              className="h-10 flex-1 rounded-lg border border-border-strong px-3 text-sm outline-none focus:border-primary"
+            />
+            <button
+              type="submit"
+              className="flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
+            >
+              <Plus className="h-4 w-4" /> Add
+            </button>
+          </form>
+        </section>
+      )}
 
       {/* Danger zone */}
       {canManage && (
