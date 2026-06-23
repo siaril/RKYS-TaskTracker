@@ -45,6 +45,7 @@ export default async function ProjectTasksPage({
       include: {
         assignee: { select: { name: true, email: true, image: true } },
         tags: { include: { tag: true } },
+        _count: { select: { comments: true } },
       },
     }),
   ]);
@@ -61,6 +62,7 @@ export default async function ProjectTasksPage({
         ? { name: t.assignee.name ?? t.assignee.email ?? "User", image: t.assignee.image }
         : null,
       tags: t.tags.map((tt) => ({ name: tt.tag.name, color: tt.tag.color })),
+      commentCount: t._count.comments,
     });
   }
 

@@ -27,7 +27,13 @@ async function uploadImage(file: File): Promise<string | null> {
   return data.url ?? null;
 }
 
-export function CommentEditor({ taskId }: { taskId: string }) {
+export function CommentEditor({
+  taskId,
+  onPosted,
+}: {
+  taskId: string;
+  onPosted?: () => void;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +103,8 @@ export function CommentEditor({ taskId }: { taskId: string }) {
         return;
       }
       editor.commands.clearContent();
-      router.refresh();
+      if (onPosted) onPosted();
+      else router.refresh();
     });
   }
 

@@ -16,11 +16,12 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
 import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
+import { CommentDrawer } from "@/components/comments/comment-drawer";
 import { formatDueDate } from "@/lib/format";
 import { moveTask } from "@/lib/actions/tasks";
 
@@ -31,6 +32,7 @@ export type BoardTask = {
   dueDate: string | null; // ISO string
   assignee: { name: string; image: string | null } | null;
   tags: { name: string; color: string }[];
+  commentCount: number;
 };
 type Status = { id: string; name: string; color: string };
 
@@ -48,6 +50,7 @@ export function KanbanBoard({
   const router = useRouter();
   const [columns, setColumns] = useState(tasksByStatus);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [openTask, setOpenTask] = useState<BoardTask | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -91,9 +94,19 @@ export function KanbanBoard({
           <Column key={s.id} status={s} count={list.length}>
             {list.map((t) =>
               canEdit ? (
-                <DraggableCard key={t.id} task={t} onOpen={() => open(t.id)} />
+                <DraggableCard
+                  key={t.id}
+                  task={t}
+                  onOpen={() => open(t.id)}
+                  onComments={() => setOpenTask(t)}
+                />
               ) : (
-                <CardShell key={t.id} task={t} onOpen={() => open(t.id)} />
+                <CardShell
+                  key={t.id}
+                  task={t}
+                  onOpen={() => open(t.id)}
+                  onComments={() => setOpenTask(t)}
+                />
               ),
             )}
           </Column>
@@ -102,19 +115,39 @@ export function KanbanBoard({
     </div>
   );
 
-  if (!canEdit) return board;
+  const drawer = openTask ? (
+    <CommentDrawer
+      taskId={openTask.id}
+      taskTitle={openTask.title}
+      onClose={() => setOpenTask(null)}
+    />
+  ) : null;
+
+  if (!canEdit) {
+    return (
+      <>
+        {board}
+        {drawer}
+      </>
+    );
+  }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
-    >
-      {board}
-      <DragOverlay>{activeId ? <CardShell task={taskById(activeId)!} dragging /> : null}</DragOverlay>
-    </DndContext>
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        {board}
+        <DragOverlay>
+          {activeId ? <CardShell task={taskById(activeId)!} dragging /> : null}
+        </DragOverlay>
+      </DndContext>
+      {drawer}
+    </>
   );
 }
 
@@ -151,7 +184,15 @@ function Column({
   );
 }
 
-function DraggableCard({ task, onOpen }: { task: BoardTask; onOpen: () => void }) {
+function DraggableCard({
+  task,
+  onOpen,
+  onComments,
+}: {
+  task: BoardTask;
+  onOpen: () => void;
+  onComments: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -166,7 +207,7 @@ function DraggableCard({ task, onOpen }: { task: BoardTask; onOpen: () => void }
       onClick={onOpen}
       className="cursor-grab touch-none active:cursor-grabbing"
     >
-      <CardShell task={task} />
+      <CardShell task={task} onComments={onComments} />
     </div>
   );
 }
@@ -174,10 +215,12 @@ function DraggableCard({ task, onOpen }: { task: BoardTask; onOpen: () => void }
 function CardShell({
   task,
   onOpen,
+  onComments,
   dragging,
 }: {
   task: BoardTask;
   onOpen?: () => void;
+  onComments?: () => void;
   dragging?: boolean;
 }) {
   return (
@@ -205,7 +248,22 @@ function CardShell({
             </span>
           )}
         </div>
-        {task.assignee && <Avatar src={task.assignee.image} name={task.assignee.name} size={22} />}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onComments?.();
+            }}
+            aria-label="Comments"
+            className="flex items-center gap-1 rounded text-xs text-muted hover:text-primary"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            {task.commentCount > 0 && task.commentCount}
+          </button>
+          {task.assignee && <Avatar src={task.assignee.image} name={task.assignee.name} size={22} />}
+        </div>
       </div>
     </div>
   );

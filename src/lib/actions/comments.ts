@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast } from "@/lib/access";
+import type { CommentDTO } from "@/lib/comment-types";
 
 const SANITIZE_OPTS: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -51,6 +52,37 @@ export async function addComment(input: { taskId: string; bodyHtml: string }): P
   });
   revalidatePath(`/projects/${task.projectId}/tasks/${input.taskId}`);
   return {};
+}
+
+/** Fetch a task's comments for the on-board drawer (access-checked). */
+export async function getTaskComments(
+  taskId: string,
+): Promise<{ comments?: CommentDTO[]; error?: string }> {
+  const user = await requireUser();
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { projectId: true },
+  });
+  if (!task) return { error: "Task not found." };
+  const access = await getProjectAccess(task.projectId, user);
+  if (!access) return { error: "No access." };
+
+  const canModerate = atLeast(access.role, "OWNER");
+  const comments = await prisma.comment.findMany({
+    where: { taskId },
+    orderBy: { createdAt: "asc" },
+    include: { author: { select: { id: true, name: true, email: true, image: true } } },
+  });
+  return {
+    comments: comments.map((c) => ({
+      id: c.id,
+      authorName: c.author.name ?? c.author.email ?? "User",
+      authorImage: c.author.image,
+      createdAt: c.createdAt.toISOString(),
+      bodyHtml: c.bodyHtml,
+      canDelete: c.author.id === user.id || canModerate,
+    })),
+  };
 }
 
 export async function deleteComment(formData: FormData) {
