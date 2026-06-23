@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, ready: true },
-  { label: "Projects", href: "/projects", icon: FolderKanban, ready: false },
+  { label: "Projects", href: "/projects", icon: FolderKanban, ready: true },
   { label: "Clients", href: "/clients", icon: Building2, ready: true },
   { label: "Products", href: "/products", icon: Boxes, ready: true },
 ];

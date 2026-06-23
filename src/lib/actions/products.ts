@@ -11,10 +11,12 @@ function str(v: FormDataEntryValue | null): string {
   return (typeof v === "string" ? v : "").trim();
 }
 
+function hasCode(e: unknown, code: string): boolean {
+  return typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === code;
+}
+
 function isUniqueViolation(e: unknown): boolean {
-  return (
-    typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "P2002"
-  );
+  return hasCode(e, "P2002");
 }
 
 const DEFAULT_COLOR = "#0073ea";
@@ -61,6 +63,11 @@ export async function deleteProduct(formData: FormData) {
   await requireUser();
   const id = str(formData.get("id"));
   if (!id) return;
-  await prisma.product.delete({ where: { id } });
+  try {
+    await prisma.product.delete({ where: { id } });
+  } catch (e) {
+    if (hasCode(e, "P2003")) redirect("/products?error=in-use");
+    throw e;
+  }
   revalidatePath("/products");
 }

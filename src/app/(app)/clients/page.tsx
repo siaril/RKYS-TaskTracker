@@ -28,6 +28,11 @@ export default async function ClientsPage({
           That name is already taken by another client.
         </p>
       )}
+      {sp.error === "in-use" && (
+        <p className="mt-4 rounded-lg bg-negative/10 px-4 py-2 text-sm text-negative">
+          That client can&apos;t be deleted while it still has projects.
+        </p>
+      )}
 
       <ul className="mt-6 space-y-2">
         {clients.length === 0 && (
