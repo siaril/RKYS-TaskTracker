@@ -162,8 +162,11 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
   return (
-    <div className="flex w-72 shrink-0 flex-col">
-      <div className="mb-2 flex items-center gap-2 px-1">
+    <div
+      className="flex w-72 shrink-0 flex-col gap-2 rounded-xl border border-border/70 p-2.5"
+      style={{ backgroundColor: `${status.color}1f` }}
+    >
+      <div className="flex items-center gap-2 px-1">
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: status.color }} />
         <span className="text-sm font-semibold text-ink">{status.name}</span>
         <span className="text-xs text-muted">{count}</span>
@@ -171,8 +174,8 @@ function Column({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-24 flex-col gap-2 rounded-xl border border-border bg-app/60 p-2 transition-colors",
-          isOver && "border-primary/50 bg-primary/5",
+          "flex min-h-24 flex-col gap-2 rounded-lg p-1 transition-colors",
+          isOver && "bg-black/5",
         )}
       >
         {children}
