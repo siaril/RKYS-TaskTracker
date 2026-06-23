@@ -36,3 +36,12 @@ services:
         sync: false # set in the Render dashboard
       - key: AUTH_URL
         sync: false # optional; set to https://<your-app>.onrender.com after first deploy
+      # Image storage (S3) — set these in the dashboard to persist screenshots.
+      - key: S3_BUCKET
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false

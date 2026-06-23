@@ -147,8 +147,10 @@ allowlist current) + `next start`. Set `AUTH_GOOGLE_ID/SECRET` and `AUTH_URL`
 Live: https://rekayasa-task-tracker.onrender.com
 
 ## 11. Known gaps / TODO (good next tasks)
-- **Uploads aren't persistent on Render free tier** (ephemeral disk) → move image
-  storage to Cloudflare R2 / S3, or attach a paid Render Disk.
+- **Image storage** supports S3 (set `S3_BUCKET`/`AWS_*`; served auth-gated via
+  `/api/files`, falls back to local disk if unset — see `src/lib/s3.ts` + `DEPLOY.md`).
+  Future hardening: per-project access on image fetch (currently any signed-in user),
+  e.g. via an Attachment model linking files → task.
 - **Task delete is a permanent hard delete with no confirmation** → add a confirm
   dialog and/or soft-delete (archive + restore).
 - **No automated tests** yet — only typecheck + manual smoke tests. Adding Vitest/
