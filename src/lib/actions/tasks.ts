@@ -33,39 +33,30 @@ function colorForTag(name: string): string {
   return TAG_PALETTE[h % TAG_PALETTE.length];
 }
 
-/** Resolve selected existing tag ids + newly-typed tag names into tag ids,
- *  creating any new tags for the project. */
-async function resolveTagIds(
-  projectId: string,
-  formData: FormData,
-): Promise<string[]> {
-  const selected = formData
-    .getAll("tags")
-    .map((v) => (typeof v === "string" ? v : ""))
-    .filter(Boolean);
-  const newNames = str(formData.get("newTags"))
-    .split(",")
-    .map((n) => n.trim())
-    .filter(Boolean);
-
-  const ids = new Set<string>();
-  if (selected.length) {
-    const existing = await prisma.tag.findMany({
-      where: { projectId, id: { in: selected } },
-      select: { id: true },
-    });
-    for (const t of existing) ids.add(t.id);
+/** Resolve the submitted tag names into tag ids, creating any that are new to
+ *  the project. Names are de-duplicated case-insensitively. */
+async function resolveTagIds(projectId: string, formData: FormData): Promise<string[]> {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const v of formData.getAll("tagNames")) {
+    const name = (typeof v === "string" ? v : "").trim();
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
   }
-  for (const name of newNames) {
+
+  const ids: string[] = [];
+  for (const name of names) {
     const tag = await prisma.tag.upsert({
       where: { projectId_name: { projectId, name } },
       update: {},
       create: { projectId, name, color: colorForTag(name) },
       select: { id: true },
     });
-    ids.add(tag.id);
+    ids.push(tag.id);
   }
-  return [...ids];
+  return ids;
 }
 
 async function canEditProject(projectId: string, user: SessionUser): Promise<boolean> {

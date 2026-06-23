@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { FormState } from "@/lib/actions/tasks";
+import { TagInput } from "@/components/tasks/tag-input";
 
 type Status = { id: string; name: string; color: string };
 type Member = { id: string; name: string | null; email: string | null };
@@ -132,31 +133,11 @@ export function TaskForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-semibold text-ink">Tags</label>
-        {tags.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {tags.map((t) => (
-              <label
-                key={t.id}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border-strong px-2.5 py-1 text-xs font-medium text-ink hover:bg-app has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-              >
-                <input
-                  type="checkbox"
-                  name="tags"
-                  value={t.id}
-                  defaultChecked={selectedTags.has(t.id)}
-                  className="accent-primary"
-                />
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
-                {t.name}
-              </label>
-            ))}
-          </div>
-        )}
-        <input
-          name="newTags"
-          maxLength={200}
-          placeholder="Add new tags, comma-separated (e.g. bug, frontend)"
-          className={inputCls}
+        <TagInput
+          suggestions={tags.map((t) => ({ name: t.name, color: t.color }))}
+          initial={tags
+            .filter((t) => selectedTags.has(t.id))
+            .map((t) => ({ name: t.name, color: t.color }))}
         />
       </div>
 
