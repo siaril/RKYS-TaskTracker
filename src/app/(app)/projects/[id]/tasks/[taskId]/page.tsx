@@ -89,14 +89,11 @@ export default async function TaskDetailPage({
         <ArrowLeft className="h-4 w-4" /> Back to tasks
       </Link>
 
-      <h2 className="mb-4 text-lg font-semibold text-ink">
-        {canEdit ? "Edit task" : task.title}
-      </h2>
-
       <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         {/* Details */}
-        <div>
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <section>
+          <h2 className="mb-3 text-base font-semibold text-ink">Details</h2>
+          <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
         {canEdit ? (
           <TaskForm
             action={updateTask}
@@ -120,6 +117,7 @@ export default async function TaskDetailPage({
           />
         ) : (
           <div className="space-y-4">
+            <p className="font-semibold text-ink">{task.title}</p>
             <p className="text-sm text-ink">
               {task.description || <span className="text-muted">No description</span>}
             </p>
@@ -148,18 +146,19 @@ export default async function TaskDetailPage({
             <p className="text-xs text-muted">You have view-only access to this project.</p>
           </div>
         )}
-      </div>
-
-      <p className="mt-3 text-xs text-muted">Created by {ownerName}</p>
-        </div>
+            <p className="mt-4 border-t border-border pt-3 text-xs text-muted">
+              Created by {ownerName}
+            </p>
+          </div>
+        </section>
 
         {/* Comments */}
         <section>
-        <h2 className="mb-3 font-semibold text-ink">
-          Comments <span className="font-normal text-muted">({comments.length})</span>
-        </h2>
-
-        <ul className="mb-4 space-y-4">
+          <h2 className="mb-3 text-base font-semibold text-ink">
+            Comments <span className="font-normal text-muted">({comments.length})</span>
+          </h2>
+          <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <ul className="mb-4 space-y-4">
           {comments.length === 0 && (
             <li className="text-sm text-muted">No comments yet. Start the discussion.</li>
           )}
@@ -186,7 +185,7 @@ export default async function TaskDetailPage({
                     )}
                   </div>
                   <div
-                    className="comment-html mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
+                    className="comment-html mt-1 rounded-lg border border-border bg-app px-3 py-2 text-sm text-ink"
                     dangerouslySetInnerHTML={{ __html: c.bodyHtml }}
                   />
                 </div>
@@ -195,13 +194,16 @@ export default async function TaskDetailPage({
           })}
         </ul>
 
-        <CommentEditor taskId={task.id} />
+            <CommentEditor taskId={task.id} />
+          </div>
         </section>
 
         {/* Activity */}
         <section>
-          <h2 className="mb-3 font-semibold text-ink">Activity</h2>
-          <ActivityFeed activities={activities} />
+          <h2 className="mb-3 text-base font-semibold text-ink">Activity</h2>
+          <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <ActivityFeed activities={activities} />
+          </div>
         </section>
       </div>
     </div>
