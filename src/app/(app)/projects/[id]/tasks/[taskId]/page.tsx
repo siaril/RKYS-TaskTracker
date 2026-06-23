@@ -81,7 +81,7 @@ export default async function TaskDetailPage({
   const canModerate = atLeast(access.role, "OWNER");
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <Link
         href={`/projects/${id}`}
         className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
@@ -104,6 +104,9 @@ export default async function TaskDetailPage({
         )}
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]">
+        {/* Details */}
+        <div>
       <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         {canEdit ? (
           <TaskForm
@@ -158,9 +161,10 @@ export default async function TaskDetailPage({
       </div>
 
       <p className="mt-3 text-xs text-muted">Created by {ownerName}</p>
+        </div>
 
-      {/* Comments */}
-      <section className="mt-8">
+        {/* Comments */}
+        <section>
         <h2 className="mb-3 font-semibold text-ink">
           Comments <span className="font-normal text-muted">({comments.length})</span>
         </h2>
@@ -202,7 +206,8 @@ export default async function TaskDetailPage({
         </ul>
 
         <CommentEditor taskId={task.id} />
-      </section>
+        </section>
+      </div>
 
       {/* Activity history */}
       <section className="mt-8">
