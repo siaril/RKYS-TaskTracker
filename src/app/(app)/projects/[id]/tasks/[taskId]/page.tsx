@@ -104,7 +104,7 @@ export default async function TaskDetailPage({
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Details */}
         <div>
       <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">

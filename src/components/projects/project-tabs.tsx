@@ -10,8 +10,8 @@ export function ProjectTabs({ projectId }: { projectId: string }) {
   const onSettings = pathname.startsWith(`${base}/settings`);
 
   const tabs = [
-    { label: "Tasks", href: base, active: !onSettings },
-    { label: "Settings", href: `${base}/settings`, active: onSettings },
+    { label: "Project Tasks", href: base, active: !onSettings },
+    { label: "Project Settings", href: `${base}/settings`, active: onSettings },
   ];
 
   return (
