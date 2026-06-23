@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { getProjectAccess, atLeast } from "@/lib/access";
 
 export type FormState = { error?: string } | undefined;
 
@@ -35,6 +36,8 @@ export async function createProject(_prev: FormState, formData: FormData): Promi
       clientId,
       createdById: user.id,
       products: { create: products.map((productId) => ({ productId })) },
+      // Creator becomes the project owner.
+      members: { create: { userId: user.id, role: "OWNER" } },
     },
   });
 
@@ -43,7 +46,7 @@ export async function createProject(_prev: FormState, formData: FormData): Promi
 }
 
 export async function updateProject(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  const user = await requireUser();
   const id = str(formData.get("id"));
   const name = str(formData.get("name"));
   const description = str(formData.get("description"));
@@ -53,6 +56,11 @@ export async function updateProject(_prev: FormState, formData: FormData): Promi
   if (!id) return { error: "Missing project id." };
   if (!name) return { error: "Project name is required." };
   if (!clientId) return { error: "Please choose a client." };
+
+  const access = await getProjectAccess(id, user);
+  if (!access || !atLeast(access.role, "EDITOR")) {
+    return { error: "You don't have permission to edit this project." };
+  }
 
   await prisma.project.update({
     where: { id },
@@ -74,9 +82,15 @@ export async function updateProject(_prev: FormState, formData: FormData): Promi
 }
 
 export async function deleteProject(formData: FormData) {
-  await requireUser();
+  const user = await requireUser();
   const id = str(formData.get("id"));
   if (!id) return;
+
+  const access = await getProjectAccess(id, user);
+  if (!access || !atLeast(access.role, "OWNER")) {
+    redirect(`/projects/${id}`);
+  }
+
   await prisma.project.delete({ where: { id } });
   revalidatePath("/projects");
   redirect("/projects?toast=deleted");

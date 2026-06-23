@@ -15,6 +15,12 @@ enum UserRole {
   MEMBER
 }
 
+enum ProjectRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -25,6 +31,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   createdProjects Project[] @relation("ProjectCreatedBy")
+  memberships   ProjectMember[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -100,8 +107,23 @@ model Project {
   client    Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
   createdBy User             @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   products  ProjectProduct[]
+  members   ProjectMember[]
 
   @@index([clientId])
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(VIEWER)
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model ProjectProduct {

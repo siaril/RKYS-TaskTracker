@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { ProductChips } from "@/components/projects/product-chips";
 import { FlashToast } from "@/components/flash-toast";
+import { requireUser } from "@/lib/session";
+import { visibleProjectsWhere } from "@/lib/access";
 
 export default async function ProjectsPage({
   searchParams,
@@ -12,13 +14,17 @@ export default async function ProjectsPage({
 }) {
   const sp = await searchParams;
   const activeProduct = sp.product;
+  const user = await requireUser();
 
   const [products, projects] = await Promise.all([
     prisma.product.findMany({ orderBy: { name: "asc" } }),
     prisma.project.findMany({
-      where: activeProduct
-        ? { products: { some: { productId: activeProduct } } }
-        : undefined,
+      where: {
+        AND: [
+          visibleProjectsWhere(user),
+          activeProduct ? { products: { some: { productId: activeProduct } } } : {},
+        ],
+      },
       orderBy: { updatedAt: "desc" },
       include: {
         client: true,
