@@ -8,12 +8,9 @@ import { ProjectForm } from "@/components/projects/project-form";
 import { ProductChips } from "@/components/projects/product-chips";
 import { MemberRoleSelect } from "@/components/projects/member-role-select";
 import { FlashToast } from "@/components/flash-toast";
+import { Avatar } from "@/components/avatar";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
 import { addMember, updateMemberRole, removeMember } from "@/lib/actions/members";
-
-function avatar(image: string | null, name: string) {
-  return image ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
-}
 
 export default async function ProjectDetailPage({
   params,
@@ -159,12 +156,7 @@ export default async function ProjectDetailPage({
           {project.members.map((m) => (
             <li key={m.userId} className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={avatar(m.user.image, m.user.name ?? m.user.email ?? "User")}
-                  alt=""
-                  className="h-8 w-8 rounded-full border border-border object-cover"
-                />
+                <Avatar src={m.user.image} name={m.user.name ?? m.user.email ?? "User"} size={32} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-ink">
                     {m.user.name ?? m.user.email}

@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { LogOut } from "lucide-react";
 import { doSignOut } from "@/lib/actions/auth";
+import { Avatar } from "@/components/avatar";
 
 type Props = {
   name: string;
   email: string;
-  image: string;
+  image: string | null;
 };
 
 export function UserMenu({ name, email, image }: Props) {
@@ -31,12 +32,7 @@ export function UserMenu({ name, email, image }: Props) {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-full p-0.5 transition-colors hover:bg-app"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt={name}
-          className="h-8 w-8 rounded-full border border-border object-cover"
-        />
+        <Avatar src={image} name={name} size={32} />
       </button>
 
       {open && (

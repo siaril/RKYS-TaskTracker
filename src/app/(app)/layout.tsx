@@ -23,7 +23,7 @@ export default async function AppLayout({
           <UserMenu
             name={user.name ?? "User"}
             email={user.email ?? ""}
-            image={user.image ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name ?? "User")}`}
+            image={user.image ?? null}
           />
         </header>
         <main className="flex-1 p-4 md:p-8">{children}</main>
