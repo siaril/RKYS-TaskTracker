@@ -56,7 +56,7 @@ export async function updateProduct(formData: FormData) {
     throw e;
   }
   revalidatePath("/products");
-  redirect("/products");
+  redirect("/products?toast=saved");
 }
 
 export async function deleteProduct(formData: FormData) {

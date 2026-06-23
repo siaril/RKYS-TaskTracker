@@ -2,18 +2,20 @@ import Link from "next/link";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ProductCreateForm } from "@/components/products/product-create-form";
+import { FlashToast } from "@/components/flash-toast";
 import { updateProduct, deleteProduct } from "@/lib/actions/products";
 
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; error?: string }>;
+  searchParams: Promise<{ edit?: string; error?: string; toast?: string }>;
 }) {
   const sp = await searchParams;
   const products = await prisma.product.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div className="mx-auto max-w-4xl">
+      <FlashToast type={sp.toast} />
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-ink">Products</h1>
         <p className="mt-1 text-sm text-muted">

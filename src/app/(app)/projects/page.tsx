@@ -3,11 +3,12 @@ import { Plus, FolderKanban } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 import { ProductChips } from "@/components/projects/product-chips";
+import { FlashToast } from "@/components/flash-toast";
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ product?: string }>;
+  searchParams: Promise<{ product?: string; toast?: string }>;
 }) {
   const sp = await searchParams;
   const activeProduct = sp.product;
@@ -28,6 +29,7 @@ export default async function ProjectsPage({
 
   return (
     <div className="mx-auto max-w-5xl">
+      <FlashToast type={sp.toast} />
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Projects</h1>

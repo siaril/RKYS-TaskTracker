@@ -2,18 +2,20 @@ import Link from "next/link";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ClientCreateForm } from "@/components/clients/client-create-form";
+import { FlashToast } from "@/components/flash-toast";
 import { updateClient, deleteClient } from "@/lib/actions/clients";
 
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; error?: string }>;
+  searchParams: Promise<{ edit?: string; error?: string; toast?: string }>;
 }) {
   const sp = await searchParams;
   const clients = await prisma.client.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div className="mx-auto max-w-4xl">
+      <FlashToast type={sp.toast} />
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-ink">Clients</h1>
         <p className="mt-1 text-sm text-muted">

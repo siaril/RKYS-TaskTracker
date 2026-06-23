@@ -39,7 +39,7 @@ export async function createProject(_prev: FormState, formData: FormData): Promi
   });
 
   revalidatePath("/projects");
-  redirect("/projects");
+  redirect("/projects?toast=created");
 }
 
 export async function updateProject(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -70,7 +70,7 @@ export async function updateProject(_prev: FormState, formData: FormData): Promi
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
-  redirect(`/projects/${id}`);
+  redirect("/projects?toast=saved");
 }
 
 export async function deleteProject(formData: FormData) {
@@ -79,5 +79,5 @@ export async function deleteProject(formData: FormData) {
   if (!id) return;
   await prisma.project.delete({ where: { id } });
   revalidatePath("/projects");
-  redirect("/projects");
+  redirect("/projects?toast=deleted");
 }

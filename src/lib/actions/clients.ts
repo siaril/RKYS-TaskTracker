@@ -47,7 +47,7 @@ export async function updateClient(formData: FormData) {
     throw e;
   }
   revalidatePath("/clients");
-  redirect("/clients");
+  redirect("/clients?toast=saved");
 }
 
 export async function deleteClient(formData: FormData) {
