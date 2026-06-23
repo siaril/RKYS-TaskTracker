@@ -2,11 +2,16 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { googleSignIn } from "@/lib/actions/auth";
 
-export default async function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const session = await auth();
   if (session?.user) {
     redirect("/dashboard");
   }
+  const { error } = await searchParams;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-app px-4">
@@ -20,6 +25,13 @@ export default async function SignInPage() {
             Sign in to manage your team&apos;s projects and tasks.
           </p>
         </div>
+
+        {error && (
+          <p className="mb-4 rounded-lg bg-negative/10 px-4 py-2 text-center text-sm text-negative">
+            This account isn&apos;t authorized to use TaskTracker. Contact your admin if you
+            think this is a mistake.
+          </p>
+        )}
 
         <form action={googleSignIn}>
           <button

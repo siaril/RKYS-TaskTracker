@@ -5,12 +5,26 @@ import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  providers: [Google],
+  providers: [
+    // allowDangerousEmailAccountLinking lets pre-created users (seeded by email,
+    // no linked account yet) connect their Google account on first sign-in.
+    Google({ allowDangerousEmailAccountLinking: true }),
+  ],
   session: { strategy: "database" },
   pages: {
     signIn: "/signin",
   },
   callbacks: {
+    // Allowlist: only people already in the database (seeded team) may sign in.
+    async signIn({ user, profile }) {
+      const email = (user.email ?? profile?.email ?? "").toLowerCase();
+      if (!email) return false;
+      const allowed = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      return Boolean(allowed);
+    },
     // Surface the user id + role on the session for use across the app.
     session({ session, user }) {
       if (session.user) {

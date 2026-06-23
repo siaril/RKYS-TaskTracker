@@ -3,6 +3,7 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { TEAM_USERS } from "./team-users";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -36,11 +37,22 @@ async function main() {
       create: p,
     });
   }
-  const [clientCount, productCount] = await Promise.all([
+  for (const u of TEAM_USERS) {
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: { name: u.name, role: u.role },
+      create: { name: u.name, email: u.email, role: u.role },
+    });
+  }
+
+  const [clientCount, productCount, userCount] = await Promise.all([
     prisma.client.count(),
     prisma.product.count(),
+    prisma.user.count(),
   ]);
-  console.log(`Seed complete: ${clientCount} clients, ${productCount} products.`);
+  console.log(
+    `Seed complete: ${clientCount} clients, ${productCount} products, ${userCount} users.`,
+  );
 }
 
 main()
