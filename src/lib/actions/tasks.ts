@@ -6,6 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast, canModifyTask, type SessionUser } from "@/lib/access";
 import { formatDueDate } from "@/lib/format";
+import { cleanHtml, hasHtmlContent } from "@/lib/sanitize";
+
+/** Sanitize a rich-text description; empty content becomes null. */
+function cleanDescription(raw: string): string | null {
+  const html = cleanHtml(raw);
+  return hasHtmlContent(html) ? html : null;
+}
 
 export type FormState = { error?: string } | undefined;
 
@@ -80,7 +87,7 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
   const user = await requireUser();
   const projectId = str(formData.get("projectId"));
   const title = str(formData.get("title"));
-  const description = str(formData.get("description"));
+  const description = cleanDescription(str(formData.get("description")));
   const statusId = str(formData.get("statusId"));
   const priority = priorityOf(str(formData.get("priority")));
   const assigneeId = str(formData.get("assigneeId")) || null;
@@ -150,7 +157,7 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   }
 
   const title = str(formData.get("title"));
-  const description = str(formData.get("description"));
+  const description = cleanDescription(str(formData.get("description")));
   const statusId = str(formData.get("statusId"));
   const priority = priorityOf(str(formData.get("priority")));
   const assigneeId = str(formData.get("assigneeId")) || null;
@@ -178,7 +185,7 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   if (old.title !== title) {
     acts.push({ type: "UPDATED", field: "title", oldValue: old.title, newValue: title });
   }
-  if ((old.description ?? "") !== description) {
+  if ((old.description ?? "") !== (description ?? "")) {
     acts.push({ type: "UPDATED", field: "description" });
   }
   if (old.statusId !== statusId) {
@@ -206,7 +213,7 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
     where: { id },
     data: {
       title,
-      description: description || null,
+      description,
       statusId,
       priority,
       assigneeId,

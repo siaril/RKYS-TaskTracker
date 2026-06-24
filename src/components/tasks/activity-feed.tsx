@@ -27,6 +27,8 @@ function describe(a: ActivityItem): string {
       return `changed assignee from ${a.oldValue} to ${a.newValue}`;
     case "dueDate":
       return `changed due date from ${a.oldValue} to ${a.newValue}`;
+    case "attachment":
+      return a.newValue ? `attached ${a.newValue}` : `removed ${a.oldValue}`;
     default:
       return "updated this task";
   }

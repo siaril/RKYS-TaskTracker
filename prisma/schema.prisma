@@ -52,6 +52,7 @@ model User {
   assignedTasks Task[]    @relation("TaskAssignee")
   comments      Comment[]
   activities    TaskActivity[]
+  uploadedAttachments Attachment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -196,6 +197,7 @@ model Task {
   tags     TaskTag[]
   comments Comment[]
   activities TaskActivity[]
+  attachments Attachment[]
 
   @@index([projectId])
   @@index([statusId])
@@ -227,6 +229,24 @@ model Comment {
 
   task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   author User @relation(fields: [authorId], references: [id])
+
+  @@index([taskId])
+}
+
+// Files attached to a task (documents/screenshots) — distinct from inline rich-text
+// images. storedName is the on-disk name in public/uploads; filename is the display name.
+model Attachment {
+  id         String   @id @default(cuid())
+  taskId     String
+  uploaderId String
+  filename   String
+  storedName String
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id])
 
   @@index([taskId])
 }

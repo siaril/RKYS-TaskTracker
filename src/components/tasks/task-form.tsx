@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import type { FormState } from "@/lib/actions/tasks";
 import { TagInput } from "@/components/tasks/tag-input";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 type Status = { id: string; name: string; color: string };
 type Member = { id: string; name: string | null; email: string | null };
@@ -47,6 +48,7 @@ export function TaskForm({
 }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
   const selectedTags = new Set(defaults?.tagIds ?? []);
+  const [description, setDescription] = useState(defaults?.description ?? "");
 
   return (
     <form action={formAction} className="space-y-5">
@@ -67,14 +69,13 @@ export function TaskForm({
 
       <div>
         <label className="mb-1.5 block text-sm font-semibold text-ink">Description</label>
-        <textarea
-          name="description"
-          rows={3}
-          maxLength={5000}
-          defaultValue={defaults?.description ?? ""}
-          placeholder="Optional"
-          className="w-full rounded-lg border border-border-strong px-3 py-2 text-sm outline-none focus:border-primary"
+        <input type="hidden" name="description" value={description} />
+        <RichTextEditor
+          initialHTML={defaults?.description ?? ""}
+          onChange={setDescription}
+          minHeightClass="min-h-[96px]"
         />
+        <p className="mt-1 text-xs text-muted">Tip: paste a screenshot to add it inline.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

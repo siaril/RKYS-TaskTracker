@@ -1,37 +1,11 @@
 "use server";
 
-import sanitizeHtml from "sanitize-html";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, isAdmin } from "@/lib/access";
+import { cleanHtml, hasHtmlContent } from "@/lib/sanitize";
 import type { CommentDTO } from "@/lib/comment-types";
-
-const SANITIZE_OPTS: sanitizeHtml.IOptions = {
-  allowedTags: [
-    "p", "br", "strong", "em", "u", "s", "a", "ul", "ol", "li",
-    "h1", "h2", "h3", "blockquote", "code", "pre", "img",
-  ],
-  allowedAttributes: {
-    a: ["href", "target", "rel"],
-    img: ["src", "alt"],
-  },
-  // Links: only safe schemes. Images: http(s) or our relative /uploads paths.
-  allowedSchemes: ["http", "https", "mailto"],
-  allowedSchemesByTag: { img: ["http", "https"] },
-  transformTags: {
-    a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer" }),
-  },
-};
-
-function clean(html: string): string {
-  return sanitizeHtml(html, SANITIZE_OPTS);
-}
-
-function hasContent(cleanHtml: string): boolean {
-  if (/<img\b/i.test(cleanHtml)) return true;
-  return sanitizeHtml(cleanHtml, { allowedTags: [], allowedAttributes: {} }).trim().length > 0;
-}
 
 export async function addComment(input: { taskId: string; bodyHtml: string }): Promise<{ error?: string }> {
   const user = await requireUser();
@@ -44,8 +18,8 @@ export async function addComment(input: { taskId: string; bodyHtml: string }): P
   const access = await getProjectAccess(task.projectId, user);
   if (!access) return { error: "You don't have access to this task." };
 
-  const bodyHtml = clean(input.bodyHtml);
-  if (!hasContent(bodyHtml)) return { error: "Comment is empty." };
+  const bodyHtml = cleanHtml(input.bodyHtml);
+  if (!hasHtmlContent(bodyHtml)) return { error: "Comment is empty." };
 
   await prisma.comment.create({
     data: { taskId: input.taskId, authorId: user.id, bodyHtml },

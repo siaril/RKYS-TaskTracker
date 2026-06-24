@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays, Paperclip, Download, X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, canModifyTask, isAdmin } from "@/lib/access";
@@ -10,9 +10,17 @@ import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
 import { CommentEditor } from "@/components/comments/comment-editor";
 import { ActivityFeed } from "@/components/tasks/activity-feed";
+import { TaskAttachmentUploader } from "@/components/tasks/task-attachment-uploader";
 import { updateTask, deleteTask } from "@/lib/actions/tasks";
 import { deleteComment } from "@/lib/actions/comments";
+import { deleteTaskAttachment } from "@/lib/actions/attachments";
 import { formatDueDate, toDateInputValue, formatDateTime } from "@/lib/format";
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default async function TaskDetailPage({
   params,
@@ -32,6 +40,10 @@ export default async function TaskDetailPage({
       assignee: { select: { name: true, email: true, image: true } },
       owner: { select: { name: true, email: true } },
       tags: { include: { tag: true } },
+      attachments: {
+        orderBy: { createdAt: "asc" },
+        include: { uploader: { select: { id: true, name: true, email: true } } },
+      },
     },
   });
   if (!task) notFound();
@@ -124,9 +136,14 @@ export default async function TaskDetailPage({
         ) : (
           <div className="space-y-4">
             <p className="font-semibold text-ink">{task.title}</p>
-            <p className="text-sm text-ink">
-              {task.description || <span className="text-muted">No description</span>}
-            </p>
+            {task.description ? (
+              <div
+                className="comment-html text-sm text-ink"
+                dangerouslySetInnerHTML={{ __html: task.description }}
+              />
+            ) : (
+              <p className="text-sm text-muted">No description</p>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <span
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
@@ -155,6 +172,51 @@ export default async function TaskDetailPage({
             <p className="mt-4 border-t border-border pt-3 text-xs text-muted">
               Created by {ownerName}
             </p>
+          </div>
+
+          {/* Files / attachments */}
+          <div className="mt-4 rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-ink">
+              <Paperclip className="h-4 w-4" /> Files
+              <span className="font-normal text-muted">({task.attachments.length})</span>
+            </h3>
+            {task.attachments.length === 0 ? (
+              <p className="text-xs text-muted">No files attached.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {task.attachments.map((a) => {
+                  const canRemove = canEdit || a.uploader.id === user.id;
+                  return (
+                    <li
+                      key={a.id}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-app/50 px-3 py-2"
+                    >
+                      <a
+                        href={`/api/attachments/${a.id}`}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-sm text-ink hover:text-primary"
+                      >
+                        <Download className="h-4 w-4 shrink-0 text-muted" />
+                        <span className="truncate">{a.filename}</span>
+                        <span className="shrink-0 text-xs text-muted">{formatBytes(a.size)}</span>
+                      </a>
+                      {canRemove && (
+                        <form action={deleteTaskAttachment}>
+                          <input type="hidden" name="id" value={a.id} />
+                          <button
+                            type="submit"
+                            aria-label={`Remove ${a.filename}`}
+                            className="flex h-6 w-6 items-center justify-center rounded text-muted hover:bg-negative/10 hover:text-negative"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {canEdit && <TaskAttachmentUploader taskId={task.id} />}
           </div>
         </section>
 
