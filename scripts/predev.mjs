@@ -2,9 +2,11 @@
 // Kills any STALE Next.js dev server still running from a previous start, so
 // multiple instances can't stack up and exhaust all RAM. See CLAUDE.md memory rules.
 //
-// It only targets node processes whose command line is a Next.js dev server
-// (contains both "next" and " dev"); it never touches the Claude/editor process
-// or this script itself.
+// It targets (a) Next dev servers (command line has "next" and " dev") AND
+// (b) orphaned Next dev BUILD WORKERS (command line has "\.next\dev\build\").
+// Those workers (one per CPU core, plus respawns) used to slip through the old
+// "next" + " dev" filter and pile up across restarts until they fork-bombed the
+// machine. It never touches the Claude/editor process or this script itself.
 import { execSync } from "node:child_process";
 
 function run(cmd) {
@@ -22,12 +24,14 @@ if (process.platform === "win32") {
 $me = ${myPid}
 $targets = Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
   Where-Object {
-    $_.ProcessId -ne $me -and
-    $_.CommandLine -like '*next*' -and
-    $_.CommandLine -like '* dev*'
+    $_.ProcessId -ne $me -and (
+      $_.CommandLine -like '*\.next\dev\build\*' -or
+      ($_.CommandLine -like '*next*' -and $_.CommandLine -like '* dev*')
+    )
   }
+$count = ($targets | Measure-Object).Count
+if ($count -gt 0) { Write-Output ("Cleaned up " + $count + " stale Next dev process(es)") }
 foreach ($p in $targets) {
-  Write-Output ("Stopped stale Next dev server (PID " + $p.ProcessId + ")")
   taskkill /F /T /PID $p.ProcessId | Out-Null
 }
 `;
@@ -37,4 +41,5 @@ foreach ($p in $targets) {
 } else {
   // macOS / Linux
   run(`pkill -f "next dev"`);
+  run(`pkill -f "\\.next/dev/build/"`);
 }
