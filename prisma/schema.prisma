@@ -33,6 +33,7 @@ enum ActivityType {
   UPDATED
   STATUS_CHANGED
   COMMENTED
+  COMMENT_DELETED
 }
 
 model User {

@@ -107,5 +107,8 @@ export async function deleteComment(formData: FormData) {
   if (!isAuthor && !canModerate) return;
 
   await prisma.comment.delete({ where: { id } });
+  await prisma.taskActivity.create({
+    data: { taskId: comment.task.id, userId: user.id, type: "COMMENT_DELETED" },
+  });
   revalidatePath(`/projects/${comment.task.projectId}/tasks/${comment.task.id}`);
 }
