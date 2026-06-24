@@ -6,22 +6,30 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, canModifyTask, isAdmin } from "@/lib/access";
-import { MAX_UPLOAD_BYTES, isBlockedFile, saveToDisk } from "@/lib/uploads";
+import { isBlockedFile } from "@/lib/uploads";
 
-export type AttachmentState = { error?: string } | undefined;
+export type RecordAttachmentInput = {
+  taskId: string;
+  storedName: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+};
 
-/** Upload and attach a file to a task. Allowed for anyone who can modify the task. */
-export async function addTaskAttachment(
-  _prev: AttachmentState,
-  formData: FormData,
-): Promise<AttachmentState> {
+/** Record an already-uploaded file (via /api/upload) as a task attachment. The
+ *  file body goes through the upload route — not this action — to avoid the
+ *  Server Actions body-size limit. Allowed for anyone who can modify the task. */
+export async function recordTaskAttachment(
+  input: RecordAttachmentInput,
+): Promise<{ error?: string }> {
   const user = await requireUser();
-  const taskId = typeof formData.get("taskId") === "string" ? (formData.get("taskId") as string) : "";
-  const file = formData.get("file");
-  if (!taskId) return { error: "Missing task." };
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to attach." };
-  if (isBlockedFile(file.name, file.type)) return { error: "That file type isn't allowed." };
-  if (file.size > MAX_UPLOAD_BYTES) return { error: "File too large (max 10 MB)." };
+  const { taskId, storedName, filename, mimeType, size } = input;
+  if (!taskId || !storedName || !filename) return { error: "Missing attachment data." };
+  if (isBlockedFile(filename, mimeType)) return { error: "That file type isn't allowed." };
+  // storedName must be a plain disk name produced by the upload route.
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(storedName) && !/^[A-Za-z0-9_-]+$/.test(storedName)) {
+    return { error: "Invalid file reference." };
+  }
 
   const task = await prisma.task.findUnique({
     where: { id: taskId },
@@ -33,19 +41,18 @@ export async function addTaskAttachment(
     return { error: "You don't have permission to attach files to this task." };
   }
 
-  const { storedName } = await saveToDisk(file);
   await prisma.attachment.create({
     data: {
       taskId,
       uploaderId: user.id,
-      filename: file.name,
+      filename,
       storedName,
-      mimeType: file.type || "application/octet-stream",
-      size: file.size,
+      mimeType: mimeType || "application/octet-stream",
+      size: Number.isFinite(size) ? size : 0,
     },
   });
   await prisma.taskActivity.create({
-    data: { taskId, userId: user.id, type: "UPDATED", field: "attachment", newValue: file.name },
+    data: { taskId, userId: user.id, type: "UPDATED", field: "attachment", newValue: filename },
   });
 
   revalidatePath(`/projects/${task.projectId}/tasks/${taskId}`);

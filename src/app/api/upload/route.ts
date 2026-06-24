@@ -20,9 +20,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "File too large (max 10 MB)." }, { status: 400 });
   }
 
-  const { url } = await saveToDisk(file);
+  const { url, storedName } = await saveToDisk(file);
   return NextResponse.json({
     url,
+    storedName,
     filename: file.name,
     mimeType: file.type,
     size: file.size,
