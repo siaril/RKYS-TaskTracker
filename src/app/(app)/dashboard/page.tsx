@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CalendarDays, Flame, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -69,17 +70,29 @@ export default async function DashboardPage() {
   const hasUrgent = urgentCount > 0;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="relative mx-auto max-w-4xl">
+      {/* Hell mode: when urgent tasks exist, set the whole view ablaze. */}
+      {hasUrgent && (
+        <div className="fixed inset-0 -z-10">
+          <Image src="/urgent-bg.png" alt="" fill priority sizes="100vw" className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/55 to-black/80" />
+        </div>
+      )}
+
       <header
         className={cn(
           "rounded-2xl border p-5",
           hasUrgent
-            ? "border-negative/40 bg-negative/5 ring-1 ring-negative/30"
+            ? "border-negative/50 bg-black/50 text-white shadow-lg ring-1 ring-negative/40 backdrop-blur-sm"
             : "border-border bg-surface shadow-sm",
         )}
       >
-        <h1 className="text-2xl font-bold text-ink">Hi {firstName} 👋</h1>
-        <p className="mt-1 text-sm text-muted">Here&apos;s what&apos;s on your plate.</p>
+        <h1 className={cn("text-2xl font-bold", hasUrgent ? "text-white" : "text-ink")}>
+          Hi {firstName} 👋
+        </h1>
+        <p className={cn("mt-1 text-sm", hasUrgent ? "text-white/75" : "text-muted")}>
+          Here&apos;s what&apos;s on your plate.
+        </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Stat label="Assigned" value={active.length} />
@@ -97,7 +110,9 @@ export default async function DashboardPage() {
       )}
 
       <section className="mt-6">
-        <h2 className="mb-3 text-base font-semibold text-ink">My tasks</h2>
+        <h2 className={cn("mb-3 text-base font-semibold", hasUrgent ? "text-white" : "text-ink")}>
+          My tasks
+        </h2>
 
         {active.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border-strong p-10 text-center">
