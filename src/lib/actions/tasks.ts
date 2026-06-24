@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, atLeast, type SessionUser } from "@/lib/access";
+import { getProjectAccess, atLeast, canModifyTask, type SessionUser } from "@/lib/access";
 import { formatDueDate } from "@/lib/format";
 
 export type FormState = { error?: string } | undefined;
@@ -137,13 +137,15 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
       statusId: true,
       priority: true,
       assigneeId: true,
+      ownerId: true,
       dueDate: true,
       status: { select: { name: true } },
       assignee: { select: { name: true, email: true } },
     },
   });
   if (!old) return { error: "Task not found." };
-  if (!(await canEditProject(old.projectId, user))) {
+  const access = await getProjectAccess(old.projectId, user);
+  if (!access || !canModifyTask(access, { ownerId: old.ownerId, assigneeId: old.assigneeId }, user.id)) {
     return { error: "You don't have permission to edit this task." };
   }
 
@@ -237,7 +239,8 @@ export async function moveTask(input: {
   toStatusId: string;
 }): Promise<void> {
   const user = await requireUser();
-  if (!(await canEditProject(input.projectId, user))) return;
+  const access = await getProjectAccess(input.projectId, user);
+  if (!access) return;
 
   const status = await prisma.workflowStatus.findFirst({
     where: { id: input.toStatusId, projectId: input.projectId },
@@ -248,9 +251,16 @@ export async function moveTask(input: {
   // Make sure the task belongs to this project before moving it.
   const task = await prisma.task.findFirst({
     where: { id: input.taskId, projectId: input.projectId },
-    select: { id: true, statusId: true, status: { select: { name: true } } },
+    select: {
+      id: true,
+      statusId: true,
+      ownerId: true,
+      assigneeId: true,
+      status: { select: { name: true } },
+    },
   });
   if (!task) return;
+  if (!canModifyTask(access, { ownerId: task.ownerId, assigneeId: task.assigneeId }, user.id)) return;
   if (task.statusId === input.toStatusId) return; // no-op
 
   const position = await prisma.task.count({
@@ -280,9 +290,13 @@ export async function deleteTask(formData: FormData) {
   const id = str(formData.get("id"));
   if (!id) return;
 
-  const task = await prisma.task.findUnique({ where: { id }, select: { projectId: true } });
+  const task = await prisma.task.findUnique({
+    where: { id },
+    select: { projectId: true, ownerId: true, assigneeId: true },
+  });
   if (!task) redirect("/projects");
-  if (!(await canEditProject(task.projectId, user))) {
+  const access = await getProjectAccess(task.projectId, user);
+  if (!access || !canModifyTask(access, { ownerId: task.ownerId, assigneeId: task.assigneeId }, user.id)) {
     redirect(`/projects/${task.projectId}`);
   }
 

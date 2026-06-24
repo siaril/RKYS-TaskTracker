@@ -15,15 +15,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/signin",
   },
   callbacks: {
-    // Allowlist: only people already in the database (seeded team) may sign in.
+    // Allowlist: only people already in the database (seeded team) and not
+    // deactivated may sign in.
     async signIn({ user, profile }) {
       const email = (user.email ?? profile?.email ?? "").toLowerCase();
       if (!email) return false;
       const allowed = await prisma.user.findUnique({
         where: { email },
-        select: { id: true },
+        select: { id: true, disabled: true },
       });
-      return Boolean(allowed);
+      return Boolean(allowed && !allowed.disabled);
     },
     // Surface the user id + role on the session for use across the app.
     session({ session, user }) {

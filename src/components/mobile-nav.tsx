@@ -5,11 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { navItems, isNavActive } from "@/components/nav-items";
+import { visibleNavItems, isNavActive } from "@/components/nav-items";
 
-export function MobileNav() {
+export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const navItems = visibleNavItems(isAdmin);
 
   // Close the drawer whenever the route changes.
   useEffect(() => {

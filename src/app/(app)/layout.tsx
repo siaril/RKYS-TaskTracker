@@ -9,14 +9,15 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
+  const isAdmin = user.role === "ADMIN";
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar isAdmin={isAdmin} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <MobileNav />
+            <MobileNav isAdmin={isAdmin} />
             <span className="text-sm font-semibold text-muted">Workspace</span>
           </div>
           <UserMenu

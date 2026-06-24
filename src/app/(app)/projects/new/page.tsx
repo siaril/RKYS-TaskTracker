@@ -3,8 +3,10 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ProjectForm } from "@/components/projects/project-form";
 import { createProject } from "@/lib/actions/projects";
+import { requireAdmin } from "@/lib/session";
 
 export default async function NewProjectPage() {
+  await requireAdmin();
   const [clients, products] = await Promise.all([
     prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.product.findMany({

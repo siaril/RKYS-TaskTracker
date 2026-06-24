@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireAdmin } from "@/lib/session";
+import { isAdmin } from "@/lib/access";
 
 export type FormState = { error?: string; ok?: boolean } | undefined;
 
@@ -22,7 +23,8 @@ function isUniqueViolation(e: unknown): boolean {
 const DEFAULT_COLOR = "#0073ea";
 
 export async function createProduct(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  const user = await requireUser();
+  if (!isAdmin(user)) return { error: "Only admins can manage products." };
   const name = str(formData.get("name"));
   const description = str(formData.get("description"));
   const color = str(formData.get("color")) || DEFAULT_COLOR;
@@ -40,7 +42,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
 }
 
 export async function updateProduct(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const id = str(formData.get("id"));
   const name = str(formData.get("name"));
   const description = str(formData.get("description"));
@@ -60,7 +62,7 @@ export async function updateProduct(formData: FormData) {
 }
 
 export async function deleteProduct(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const id = str(formData.get("id"));
   if (!id) return;
   try {

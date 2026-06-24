@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { ClientCreateForm } from "@/components/clients/client-create-form";
 import { FlashToast } from "@/components/flash-toast";
 import { updateClient, deleteClient } from "@/lib/actions/clients";
+import { requireAdmin } from "@/lib/session";
 
 export default async function ClientsPage({
   searchParams,
 }: {
   searchParams: Promise<{ edit?: string; error?: string; toast?: string }>;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
   const clients = await prisma.client.findMany({ orderBy: { name: "asc" } });
 

@@ -31,6 +31,21 @@ export function atLeast(role: ProjectRole, min: ProjectRole): boolean {
   return RANK[role] >= RANK[min];
 }
 
+/** Whether a user may modify (edit/delete/move) a specific task.
+ *  Admins and project OWNERs can touch any task in the project; EDITORs are
+ *  limited to tasks they own (created) or are assigned to; VIEWERs cannot. */
+export function canModifyTask(
+  access: ProjectAccess,
+  task: { ownerId: string; assigneeId: string | null },
+  userId: string,
+): boolean {
+  if (access.isAdmin || access.role === "OWNER") return true;
+  if (access.role === "EDITOR") {
+    return task.ownerId === userId || task.assigneeId === userId;
+  }
+  return false;
+}
+
 /** Prisma `where` clause limiting projects to those a user may see. */
 export function visibleProjectsWhere(user: SessionUser) {
   return isAdmin(user) ? {} : { members: { some: { userId: user.id } } };

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, atLeast } from "@/lib/access";
+import { getProjectAccess, canModifyTask, isAdmin } from "@/lib/access";
 import { TaskForm } from "@/components/tasks/task-form";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
 import { TagChips } from "@/components/tasks/tag-chips";
@@ -24,7 +24,6 @@ export default async function TaskDetailPage({
 
   const access = await getProjectAccess(id, user);
   if (!access) notFound();
-  const canEdit = atLeast(access.role, "EDITOR");
 
   const task = await prisma.task.findFirst({
     where: { id: taskId, projectId: id },
@@ -36,6 +35,12 @@ export default async function TaskDetailPage({
     },
   });
   if (!task) notFound();
+
+  const canEdit = canModifyTask(
+    access,
+    { ownerId: task.ownerId, assigneeId: task.assigneeId },
+    user.id,
+  );
 
   const [statuses, members, projectTags] = await Promise.all([
     canEdit
@@ -78,7 +83,8 @@ export default async function TaskDetailPage({
   }));
   const ownerName = task.owner.name ?? task.owner.email ?? "Unknown";
   const assigneeName = task.assignee?.name ?? task.assignee?.email ?? null;
-  const canModerate = atLeast(access.role, "OWNER");
+  // Comments are deletable only by their author or a global admin.
+  const canModerate = isAdmin(user);
 
   return (
     <div className="w-full">

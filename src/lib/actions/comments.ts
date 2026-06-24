@@ -4,7 +4,7 @@ import sanitizeHtml from "sanitize-html";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, atLeast } from "@/lib/access";
+import { getProjectAccess, isAdmin } from "@/lib/access";
 import type { CommentDTO } from "@/lib/comment-types";
 
 const SANITIZE_OPTS: sanitizeHtml.IOptions = {
@@ -70,7 +70,8 @@ export async function getTaskComments(
   const access = await getProjectAccess(task.projectId, user);
   if (!access) return { error: "No access." };
 
-  const canModerate = atLeast(access.role, "OWNER");
+  // A comment is deletable only by its author or a global admin.
+  const canModerate = isAdmin(user);
   const comments = await prisma.comment.findMany({
     where: { taskId },
     orderBy: { createdAt: "asc" },
@@ -100,8 +101,9 @@ export async function deleteComment(formData: FormData) {
   if (!comment) return;
 
   const access = await getProjectAccess(comment.task.projectId, user);
+  if (!access) return; // must still have project access at all
   const isAuthor = comment.authorId === user.id;
-  const canModerate = !!access && atLeast(access.role, "OWNER");
+  const canModerate = isAdmin(user);
   if (!isAuthor && !canModerate) return;
 
   await prisma.comment.delete({ where: { id } });

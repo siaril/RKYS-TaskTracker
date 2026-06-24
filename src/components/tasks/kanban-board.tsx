@@ -33,6 +33,7 @@ export type BoardTask = {
   assignee: { name: string; image: string | null } | null;
   tags: { name: string; color: string }[];
   commentCount: number;
+  canModify: boolean; // may this user drag/move this specific card?
 };
 type Status = { id: string; name: string; color: string };
 
@@ -93,7 +94,7 @@ export function KanbanBoard({
         return (
           <Column key={s.id} status={s} count={list.length}>
             {list.map((t) =>
-              canEdit ? (
+              canEdit && t.canModify ? (
                 <DraggableCard
                   key={t.id}
                   task={t}

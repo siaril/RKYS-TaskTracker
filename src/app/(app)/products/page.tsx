@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { ProductCreateForm } from "@/components/products/product-create-form";
 import { FlashToast } from "@/components/flash-toast";
 import { updateProduct, deleteProduct } from "@/lib/actions/products";
+import { requireAdmin } from "@/lib/session";
 
 export default async function ProductsPage({
   searchParams,
 }: {
   searchParams: Promise<{ edit?: string; error?: string; toast?: string }>;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
   const products = await prisma.product.findMany({ orderBy: { name: "asc" } });
 

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Plus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, atLeast } from "@/lib/access";
+import { getProjectAccess, atLeast, canModifyTask } from "@/lib/access";
 import { cn } from "@/lib/utils";
 import { FlashToast } from "@/components/flash-toast";
 import { KanbanBoard, type BoardTask } from "@/components/tasks/kanban-board";
@@ -63,6 +63,7 @@ export default async function ProjectTasksPage({
         : null,
       tags: t.tags.map((tt) => ({ name: tt.tag.name, color: tt.tag.color })),
       commentCount: t._count.comments,
+      canModify: canModifyTask(access, { ownerId: t.ownerId, assigneeId: t.assigneeId }, user.id),
     });
   }
 

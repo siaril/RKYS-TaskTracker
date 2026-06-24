@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, atLeast } from "@/lib/access";
+import { getProjectAccess, atLeast, isAdmin } from "@/lib/access";
 import { DEFAULT_STATUSES } from "@/lib/default-statuses";
 
 export type FormState = { error?: string } | undefined;
@@ -22,6 +22,7 @@ function productIds(formData: FormData): string[] {
 
 export async function createProject(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
+  if (!isAdmin(user)) return { error: "Only admins can create projects." };
   const name = str(formData.get("name"));
   const description = str(formData.get("description"));
   const clientId = str(formData.get("clientId"));

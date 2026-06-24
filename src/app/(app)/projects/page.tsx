@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ProductChips } from "@/components/projects/product-chips";
 import { FlashToast } from "@/components/flash-toast";
 import { requireUser } from "@/lib/session";
-import { visibleProjectsWhere } from "@/lib/access";
+import { visibleProjectsWhere, isAdmin } from "@/lib/access";
 
 export default async function ProjectsPage({
   searchParams,
@@ -43,12 +43,14 @@ export default async function ProjectsPage({
             Work grouped by client and the products it uses.
           </p>
         </div>
-        <Link
-          href="/projects/new"
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
-        >
-          <Plus className="h-4 w-4" /> New project
-        </Link>
+        {isAdmin(user) && (
+          <Link
+            href="/projects/new"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+          >
+            <Plus className="h-4 w-4" /> New project
+          </Link>
+        )}
       </header>
 
       {/* Filter by product */}

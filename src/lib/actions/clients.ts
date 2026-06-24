@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireAdmin } from "@/lib/session";
+import { isAdmin } from "@/lib/access";
 
 export type FormState = { error?: string; ok?: boolean } | undefined;
 
@@ -20,7 +21,8 @@ function isUniqueViolation(e: unknown): boolean {
 }
 
 export async function createClient(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  const user = await requireUser();
+  if (!isAdmin(user)) return { error: "Only admins can manage clients." };
   const name = str(formData.get("name"));
   const notes = str(formData.get("notes"));
   if (!name) return { error: "Name is required." };
@@ -35,7 +37,7 @@ export async function createClient(_prev: FormState, formData: FormData): Promis
 }
 
 export async function updateClient(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const id = str(formData.get("id"));
   const name = str(formData.get("name"));
   const notes = str(formData.get("notes"));
@@ -51,7 +53,7 @@ export async function updateClient(formData: FormData) {
 }
 
 export async function deleteClient(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const id = str(formData.get("id"));
   if (!id) return;
   try {
