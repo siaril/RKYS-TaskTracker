@@ -36,5 +36,8 @@ export async function POST(req: Request) {
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
 
-  return NextResponse.json({ url: `/uploads/${name}` });
+  // Serve through the /api/files route handler, not the static /uploads path:
+  // Next only serves public/ files that existed at BUILD time, so runtime
+  // uploads 404 on `next start`. The route handler streams them off disk.
+  return NextResponse.json({ url: `/api/files/${name}` });
 }
