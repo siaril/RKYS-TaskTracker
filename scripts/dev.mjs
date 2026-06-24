@@ -15,6 +15,10 @@ import path from "node:path";
 
 const TREE_CAP_MB = Number(process.env.DEV_TREE_CAP_MB || 3000);
 const FREE_FLOOR_MB = Number(process.env.DEV_FREE_FLOOR_MB || 800);
+// Fork-bomb guard: Next dev spawns ~1 build worker per CPU core. If the tree
+// blows past this, build workers are crash-respawning out of control — kill it
+// before it eats all RAM. (We've seen 1000+ orphaned workers exhaust memory.)
+const MAX_TREE_PROCS = Number(process.env.DEV_MAX_TREE_PROCS || 64);
 const WARN_TREE_MB = Math.round(TREE_CAP_MB * 0.7);
 const MB = 1024 * 1024;
 const isWin = process.platform === "win32";
@@ -37,8 +41,14 @@ let warnedTree = false;
 const timer = setInterval(check, 1500);
 
 function check() {
-  const tree = nodeTreeMB();
+  const { mb: tree, procs } = devTreeStats();
   const free = Math.round(os.freemem() / MB);
+
+  // Fork-bomb guard fires first — catches runaway worker spawning early, before
+  // RAM is gone (and before the memory metric balloons from 1000+ processes).
+  if (procs > MAX_TREE_PROCS) {
+    return stop(`runaway worker spawn detected (${procs} node processes in the dev tree)`, 1);
+  }
 
   if (tree > WARN_TREE_MB && !warnedTree) {
     console.warn(`\n[dev-guard] ⚠ dev server using ${tree} MB (cap ${TREE_CAP_MB} MB). Watching closely…`);
@@ -85,13 +95,13 @@ function gracefulStop() {
   process.exit(0);
 }
 
-// Memory of ONLY the dev server's own process tree (the spawned `child` + its
-// descendants) — NOT every node.exe on the machine. Summing all node processes
-// would wrongly include Claude Code, other coding agents, language servers, etc.
-// and trip the cap instantly when several are running.
-function nodeTreeMB() {
+// Memory AND process count of ONLY the dev server's own process tree (the spawned
+// `child` + its descendants) — NOT every node.exe on the machine. Summing all node
+// processes would wrongly include Claude Code, other coding agents, language
+// servers, etc. and trip the cap instantly when several are running.
+function devTreeStats() {
   const root = child?.pid;
-  if (!root) return 0;
+  if (!root) return { mb: 0, procs: 0 };
   try {
     let procs;
     if (isWin) {
@@ -119,14 +129,15 @@ function nodeTreeMB() {
         if (m) procs.push({ pid: +m[1], ppid: +m[2], bytes: +m[3] * 1024 }); // rss is KB
       }
     }
-    return Math.round(subtreeBytes(procs, root) / MB);
+    const { bytes, count } = subtreeStats(procs, root);
+    return { mb: Math.round(bytes / MB), procs: count };
   } catch {
-    return 0;
+    return { mb: 0, procs: 0 };
   }
 }
 
-// Sum the working-set/RSS bytes of `root` plus all of its descendant processes.
-function subtreeBytes(procs, root) {
+// Sum the working-set/RSS bytes AND count of `root` plus all descendant processes.
+function subtreeStats(procs, root) {
   const childrenOf = new Map();
   const byPid = new Map();
   for (const p of procs) {
@@ -136,16 +147,20 @@ function subtreeBytes(procs, root) {
   }
   const seen = new Set();
   const stack = [root];
-  let sum = 0;
+  let bytes = 0;
+  let count = 0;
   while (stack.length) {
     const pid = stack.pop();
     if (seen.has(pid)) continue;
     seen.add(pid);
     const self = byPid.get(pid);
-    if (self) sum += self.bytes;
+    if (self) {
+      bytes += self.bytes;
+      count++;
+    }
     for (const c of childrenOf.get(pid) ?? []) stack.push(c);
   }
-  return sum;
+  return { bytes, count };
 }
 
 function killTree(pid) {
@@ -158,11 +173,12 @@ function killTree(pid) {
 function killStaleDevServers() {
   try {
     if (isWin) {
-      const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.ProcessId -ne ${process.pid} -and $_.CommandLine -like '*next*' -and $_.CommandLine -like '* dev*' } | ForEach-Object { taskkill /F /T /PID $_.ProcessId | Out-Null }`;
+      const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.ProcessId -ne ${process.pid} -and ( $_.CommandLine -like '*\\.next\\dev\\build\\*' -or ($_.CommandLine -like '*next*' -and $_.CommandLine -like '* dev*') ) } | ForEach-Object { taskkill /F /T /PID $_.ProcessId | Out-Null }`;
       const enc = Buffer.from(ps, "utf16le").toString("base64");
       execSync(`powershell -NoProfile -EncodedCommand ${enc}`, { stdio: "ignore" });
     } else {
       execSync(`pkill -f "next dev" || true`, { stdio: "ignore" });
+      execSync(`pkill -f "\\.next/dev/build/" || true`, { stdio: "ignore" });
     }
   } catch {}
 }
