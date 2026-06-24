@@ -85,28 +85,67 @@ function gracefulStop() {
   process.exit(0);
 }
 
+// Memory of ONLY the dev server's own process tree (the spawned `child` + its
+// descendants) — NOT every node.exe on the machine. Summing all node processes
+// would wrongly include Claude Code, other coding agents, language servers, etc.
+// and trip the cap instantly when several are running.
 function nodeTreeMB() {
+  const root = child?.pid;
+  if (!root) return 0;
   try {
+    let procs;
     if (isWin) {
-      const out = execSync('tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH', {
+      // One CIM dump of every process (pid, parent pid, working set bytes).
+      const ps =
+        "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,WorkingSetSize | ConvertTo-Csv -NoTypeInformation";
+      const enc = Buffer.from(ps, "utf16le").toString("base64");
+      const out = execSync(`powershell -NoProfile -EncodedCommand ${enc}`, {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
       });
-      let kb = 0;
+      procs = [];
       for (const line of out.split(/\r?\n/)) {
-        const m = line.match(/"([\d.,]+) K"\s*$/);
-        if (m) kb += parseInt(m[1].replace(/[.,]/g, ""), 10);
+        const m = line.match(/^"?(\d+)"?,"?(\d+)"?,"?(\d+)"?/);
+        if (m) procs.push({ pid: +m[1], ppid: +m[2], bytes: +m[3] });
       }
-      return Math.round(kb / 1024);
+    } else {
+      const out = execSync("ps -A -o pid=,ppid=,rss=", {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      procs = [];
+      for (const line of out.trim().split(/\r?\n/)) {
+        const m = line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)/);
+        if (m) procs.push({ pid: +m[1], ppid: +m[2], bytes: +m[3] * 1024 }); // rss is KB
+      }
     }
-    const out = execSync("ps -A -o rss,comm | awk '/node/{s+=$1} END{print s+0}'", {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return Math.round(Number(out.trim()) / 1024);
+    return Math.round(subtreeBytes(procs, root) / MB);
   } catch {
     return 0;
   }
+}
+
+// Sum the working-set/RSS bytes of `root` plus all of its descendant processes.
+function subtreeBytes(procs, root) {
+  const childrenOf = new Map();
+  const byPid = new Map();
+  for (const p of procs) {
+    byPid.set(p.pid, p);
+    if (!childrenOf.has(p.ppid)) childrenOf.set(p.ppid, []);
+    childrenOf.get(p.ppid).push(p.pid);
+  }
+  const seen = new Set();
+  const stack = [root];
+  let sum = 0;
+  while (stack.length) {
+    const pid = stack.pop();
+    if (seen.has(pid)) continue;
+    seen.add(pid);
+    const self = byPid.get(pid);
+    if (self) sum += self.bytes;
+    for (const c of childrenOf.get(pid) ?? []) stack.push(c);
+  }
+  return sum;
 }
 
 function killTree(pid) {
