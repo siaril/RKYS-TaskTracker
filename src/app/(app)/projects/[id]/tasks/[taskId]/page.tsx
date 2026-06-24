@@ -3,18 +3,18 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Paperclip, Download, X } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, canModifyTask, isAdmin } from "@/lib/access";
+import { getProjectAccess, canModifyTask } from "@/lib/access";
+import { getTaskComments } from "@/lib/actions/comments";
 import { TaskForm } from "@/components/tasks/task-form";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
 import { TagChips } from "@/components/tasks/tag-chips";
 import { Avatar } from "@/components/avatar";
-import { CommentEditor } from "@/components/comments/comment-editor";
+import { CommentThread } from "@/components/comments/comment-thread";
 import { ActivityFeed } from "@/components/tasks/activity-feed";
 import { TaskAttachmentUploader } from "@/components/tasks/task-attachment-uploader";
 import { updateTask, deleteTask } from "@/lib/actions/tasks";
-import { deleteComment } from "@/lib/actions/comments";
 import { deleteTaskAttachment } from "@/lib/actions/attachments";
-import { formatDueDate, toDateInputValue, formatDateTime } from "@/lib/format";
+import { formatDueDate, toDateInputValue } from "@/lib/format";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -76,11 +76,12 @@ export default async function TaskDetailPage({
         })
       : Promise.resolve([]),
   ]);
-  const comments = await prisma.comment.findMany({
-    where: { taskId: task.id },
-    orderBy: { createdAt: "asc" },
-    include: { author: { select: { id: true, name: true, email: true, image: true } } },
-  });
+  const commentsResult = await getTaskComments(task.id);
+  const threadedComments = commentsResult.comments ?? [];
+  const totalCommentCount = threadedComments.reduce(
+    (sum, n) => sum + 1 + n.replies.length,
+    0,
+  );
 
   const activities = await prisma.taskActivity.findMany({
     where: { taskId: task.id },
@@ -96,8 +97,6 @@ export default async function TaskDetailPage({
   const ownerName = task.owner.name ?? task.owner.email ?? "Unknown";
   const assigneeName = task.assignee?.name ?? task.assignee?.email ?? null;
   // Comments are deletable only by their author or a global admin.
-  const canModerate = isAdmin(user);
-
   return (
     <div className="w-full">
       <Link
@@ -223,46 +222,10 @@ export default async function TaskDetailPage({
         {/* Comments */}
         <section>
           <h2 className="mb-3 text-base font-semibold text-ink">
-            Comments <span className="font-normal text-muted">({comments.length})</span>
+            Comments <span className="font-normal text-muted">({totalCommentCount})</span>
           </h2>
           <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
-            <ul className="mb-4 space-y-4">
-          {comments.length === 0 && (
-            <li className="text-sm text-muted">No comments yet. Start the discussion.</li>
-          )}
-          {comments.map((c) => {
-            const authorName = c.author.name ?? c.author.email ?? "User";
-            const canDelete = c.author.id === user.id || canModerate;
-            return (
-              <li key={c.id} className="flex gap-3">
-                <Avatar src={c.author.image} name={authorName} size={32} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-ink">{authorName}</span>
-                    <span className="text-xs text-muted">{formatDateTime(c.createdAt)}</span>
-                    {canDelete && (
-                      <form action={deleteComment} className="ml-auto">
-                        <input type="hidden" name="id" value={c.id} />
-                        <button
-                          type="submit"
-                          className="text-xs text-muted hover:text-negative"
-                        >
-                          Delete
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                  <div
-                    className="comment-html mt-1 rounded-lg border border-border bg-app px-3 py-2 text-sm text-ink"
-                    dangerouslySetInnerHTML={{ __html: c.bodyHtml }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-
-            <CommentEditor taskId={task.id} />
+            <CommentThread taskId={task.id} initialComments={threadedComments} />
           </div>
         </section>
 

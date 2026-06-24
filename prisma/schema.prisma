@@ -221,16 +221,20 @@ model TaskActivity {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   taskId    String
   authorId  String
+  parentId  String?
   bodyHtml  String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
-  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id])
+  task    Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
 
   @@index([taskId])
+  @@index([parentId])
 }
 
 // Files attached to a task (documents/screenshots) — distinct from inline rich-text
