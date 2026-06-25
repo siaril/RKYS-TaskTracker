@@ -8,6 +8,7 @@
 // "next" + " dev" filter and pile up across restarts until they fork-bombed the
 // machine. It never touches the Claude/editor process or this script itself.
 import { execSync } from "node:child_process";
+import { wasUncleanExit, markDevClean, clearNextCache } from "./dev-cache.mjs";
 
 function run(cmd) {
   try {
@@ -18,6 +19,11 @@ function run(cmd) {
 }
 
 const myPid = process.pid;
+
+// Did the previous dev run die uncleanly (forced kill / crash)? Detect it BEFORE
+// we kill strays below — finding stale workers is itself a sign of an unclean exit.
+const uncleanExit = wasUncleanExit();
+let staleFound = false;
 
 if (process.platform === "win32") {
   const ps = `
@@ -37,9 +43,26 @@ foreach ($p in $targets) {
 `;
   const encoded = Buffer.from(ps, "utf16le").toString("base64");
   const out = run(`powershell -NoProfile -EncodedCommand ${encoded}`).trim();
-  if (out) console.log(out);
+  if (out) {
+    console.log(out);
+    staleFound = true;
+  }
 } else {
   // macOS / Linux
   run(`pkill -f "next dev"`);
   run(`pkill -f "\\.next/dev/build/"`);
 }
+
+// If the previous run died uncleanly, its `.next` cache may be half-written and
+// will fork-bomb the build workers on start. Wipe it so we start cold and safe.
+// A clean Ctrl-C removes the lock, so healthy restarts keep their cache (fast).
+if (uncleanExit || staleFound) {
+  const cleared = clearNextCache();
+  console.log(
+    cleared
+      ? "[predev] Previous dev run didn't exit cleanly — cleared .next cache to prevent the build-worker fork bomb."
+      : "[predev] Previous dev run didn't exit cleanly (no .next cache to clear).",
+  );
+}
+// Consume the lock; dev.mjs writes a fresh one when it starts.
+markDevClean();

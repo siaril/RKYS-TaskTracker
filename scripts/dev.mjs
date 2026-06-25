@@ -12,6 +12,7 @@
 import { spawn, execSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { markDevActive, markDevClean } from "./dev-cache.mjs";
 
 const TREE_CAP_MB = Number(process.env.DEV_TREE_CAP_MB || 3000);
 const FREE_FLOOR_MB = Number(process.env.DEV_FREE_FLOOR_MB || 800);
@@ -24,6 +25,11 @@ const MB = 1024 * 1024;
 const isWin = process.platform === "win32";
 
 killStaleDevServers();
+
+// Record that a dev run is in progress. Only a graceful Ctrl-C clears this; if a
+// forced kill or crash leaves it behind, the next `npm run dev` (predev) wipes the
+// possibly-corrupt .next cache before starting. See scripts/dev-cache.mjs.
+markDevActive();
 
 const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
 const child = spawn(process.execPath, [nextBin, "dev"], {
@@ -82,6 +88,9 @@ function stop(reason, code) {
 
 child.on("exit", (code) => {
   clearInterval(timer);
+  // Next dev exited on its own. A clean exit means the cache is trustworthy;
+  // a non-zero exit (crash) is left marked unclean so predev wipes it next time.
+  if (!stopping && (code ?? 0) === 0) markDevClean();
   process.exit(code ?? 0);
 });
 process.on("SIGINT", () => gracefulStop());
@@ -91,6 +100,7 @@ function gracefulStop() {
   if (stopping) return;
   stopping = true;
   clearInterval(timer);
+  markDevClean(); // user-initiated Ctrl-C → cache is clean, keep it for a fast restart
   killTree(child.pid);
   process.exit(0);
 }
