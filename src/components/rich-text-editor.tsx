@@ -1,9 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import { createMentionExtension } from "@/components/editor/mention";
+import { searchMentionables } from "@/lib/actions/mentions";
 import {
   Bold,
   Italic,
@@ -43,13 +46,26 @@ export function RichTextEditor({
   withFileAttach = false,
   minHeightClass = "min-h-[80px]",
   onError,
+  mention,
 }: {
   initialHTML?: string;
   onChange: (html: string) => void;
   withFileAttach?: boolean;
   minHeightClass?: string;
   onError?: (message: string) => void;
+  // When set, enables `@`-mention autocomplete of project members. Provide the
+  // task (comments) or project (descriptions) the editor belongs to.
+  mention?: { taskId?: string; projectId?: string };
 }) {
+  // Build the mention extension once per editor instance (the context is stable).
+  const mentionExt = useMemo(() => {
+    if (!mention) return null;
+    return createMentionExtension((query) =>
+      searchMentionables({ ...mention, query }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mention?.taskId, mention?.projectId]);
+
   const editor = useEditor({
     immediatelyRender: false,
     content: initialHTML ?? "",
@@ -57,6 +73,7 @@ export function RichTextEditor({
       StarterKit.configure({ link: false }),
       Image,
       Link.configure({ openOnClick: false, autolink: true }),
+      ...(mentionExt ? [mentionExt] : []),
     ],
     editorProps: {
       attributes: { class: cn("comment-editor", minHeightClass) },

@@ -74,6 +74,7 @@ export function TaskForm({
           initialHTML={defaults?.description ?? ""}
           onChange={setDescription}
           minHeightClass="min-h-[96px]"
+          mention={{ projectId }}
         />
         <p className="mt-1 text-xs text-muted">Tip: paste a screenshot to add it inline.</p>
       </div>

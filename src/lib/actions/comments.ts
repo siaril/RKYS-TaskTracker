@@ -79,6 +79,7 @@ export async function getTaskComments(
   const all: (CommentDTO & { parentId: string | null })[] = rows.map((c) => ({
     id: c.id,
     parentId: c.parentId,
+    authorId: c.author.id,
     authorName: c.author.name ?? c.author.email ?? "User",
     authorImage: c.author.image,
     createdAt: c.createdAt.toISOString(),

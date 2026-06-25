@@ -6,12 +6,16 @@ import sanitizeHtml from "sanitize-html";
 const SANITIZE_OPTS: sanitizeHtml.IOptions = {
   allowedTags: [
     "p", "br", "strong", "em", "u", "s", "a", "ul", "ol", "li",
-    "h1", "h2", "h3", "blockquote", "code", "pre", "img",
+    "h1", "h2", "h3", "blockquote", "code", "pre", "img", "span",
   ],
   allowedAttributes: {
     a: ["href", "target", "rel"],
     img: ["src", "alt"],
+    // @-mention chips: <span class="mention" data-type="mention" data-id data-label>
+    span: ["class", "data-type", "data-id", "data-label"],
   },
+  // Only allow our mention class on spans (no arbitrary styling injection).
+  allowedClasses: { span: ["mention"] },
   // Links: only safe schemes (relative /api/files links have no scheme → allowed).
   allowedSchemes: ["http", "https", "mailto"],
   allowedSchemesByTag: { img: ["http", "https"] },

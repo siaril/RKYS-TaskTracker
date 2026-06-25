@@ -9,18 +9,20 @@ import { addComment } from "@/lib/actions/comments";
 export function CommentEditor({
   taskId,
   parentId,
+  initialHTML,
   onPosted,
   onCancel,
 }: {
   taskId: string;
   parentId?: string | null;
+  initialHTML?: string;
   onPosted?: () => void;
   onCancel?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [html, setHtml] = useState("");
+  const [html, setHtml] = useState(initialHTML ?? "");
   const [resetKey, setResetKey] = useState(0);
 
   function submit() {
@@ -43,9 +45,11 @@ export function CommentEditor({
     <div className="space-y-2">
       <RichTextEditor
         key={resetKey}
+        initialHTML={initialHTML}
         onChange={setHtml}
         withFileAttach
         onError={setError}
+        mention={{ taskId }}
       />
       <div className="flex items-center justify-between gap-2">
         <span className={cn("text-xs", error ? "text-negative" : "text-muted")}>
