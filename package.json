@@ -1,8 +1,9 @@
 {
   "name": "tasktracker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
+    "release-notes": "tsx scripts/release-notes.ts",
     "predev": "node scripts/predev.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:raw": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev",

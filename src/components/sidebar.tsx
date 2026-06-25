@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { visibleNavItems, isNavActive } from "@/components/nav-items";
+import { WhatsNewBadge } from "@/components/whats-new";
 
 export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
@@ -37,6 +38,10 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
           );
         })}
       </nav>
+
+      <div className="mt-auto border-t border-border px-5 py-3">
+        <WhatsNewBadge />
+      </div>
     </aside>
   );
 }

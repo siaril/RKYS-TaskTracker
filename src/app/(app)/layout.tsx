@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/sidebar";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
+import { WhatsNew } from "@/components/whats-new";
 import { requireUser } from "@/lib/session";
 
 export default async function AppLayout({
@@ -28,6 +29,7 @@ export default async function AppLayout({
         </header>
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
+      <WhatsNew />
     </div>
   );
 }
