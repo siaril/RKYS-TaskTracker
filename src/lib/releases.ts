@@ -24,6 +24,7 @@ export const RELEASES: Release[] = [
       "Reply to any comment — replies now @mention who they're directed to, so threads stay clear.",
       "Mention teammates with @ in comments and task descriptions.",
       "Delete tasks safely: a deleted task moves to a new Deleted column instead of being gone for good, and project owners can restore it.",
+      "Take over a task with a new \"Assign to me\" button — and each task now shows who created it and who's assigned right at the top.",
       "See the app version in the sidebar, plus a \"What's new\" popup whenever we ship an update.",
     ],
   },
