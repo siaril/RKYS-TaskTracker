@@ -12,11 +12,20 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
-      <div className="flex h-14 items-center gap-2 border-b border-border px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-          T
+      <div className="border-b border-border px-5 py-3">
+        <div className="flex items-start gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
+            T
+          </div>
+          <div className="min-w-0">
+            <span className="block text-sm font-bold leading-tight text-ink">
+              Rekayasa Task Tracker
+            </span>
+            <div className="mt-1">
+              <WhatsNewBadge />
+            </div>
+          </div>
         </div>
-        <span className="text-base font-bold text-ink">TaskTracker</span>
       </div>
 
       <nav className="flex flex-col gap-1 p-3">
@@ -38,10 +47,6 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
           );
         })}
       </nav>
-
-      <div className="mt-auto border-t border-border px-5 py-3">
-        <WhatsNewBadge />
-      </div>
     </aside>
   );
 }

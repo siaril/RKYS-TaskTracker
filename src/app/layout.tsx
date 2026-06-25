@@ -8,7 +8,7 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "TaskTracker",
+  title: "Rekayasa Task Tracker",
   description: "Kanban task tracker for teams",
 };
 

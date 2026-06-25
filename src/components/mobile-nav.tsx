@@ -42,7 +42,7 @@ export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
                   T
                 </div>
-                <span className="text-base font-bold text-ink">TaskTracker</span>
+                <span className="text-sm font-bold text-ink">Rekayasa Task Tracker</span>
               </div>
               <button
                 type="button"

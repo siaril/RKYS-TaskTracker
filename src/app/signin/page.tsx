@@ -44,7 +44,7 @@ export default async function SignInPage({
 
         {error && (
           <p className="mb-4 rounded-lg bg-negative/10 px-4 py-2 text-center text-sm text-negative">
-            This account isn&apos;t authorized to use TaskTracker. Contact your admin if you
+            This account isn&apos;t authorized to use Rekayasa Task Tracker. Contact your admin if you
             think this is a mistake.
           </p>
         )}
