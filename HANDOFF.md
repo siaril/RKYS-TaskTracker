@@ -44,20 +44,28 @@ src/lib/prisma.ts          Prisma singleton (globalThis). NEVER instantiate Pris
 src/lib/access.ts          getProjectAccess(), atLeast(), isAdmin(), visibleProjectsWhere().
 src/lib/actions/*          Server actions, one file per domain (clients, products,
                            projects, members, statuses, tasks, comments, auth).
-src/lib/{format,default-statuses,comment-types}.ts
+src/lib/{format,default-statuses,comment-types,access,sanitize,uploads}.ts
+src/lib/{notify,mentions-extract,mention-types,releases}.ts   notifications + mentions + versioning
 src/components/*           UI. Server components by default; "use client" only when needed.
+                           Notable: notification-bell, whats-new, copy-link-button, rich-text-editor.
 src/generated/prisma/*     Generated Prisma client (GITIGNORED — run db:generate).
 prisma/schema.prisma       Schema. prisma/migrations/* committed.
 prisma/{seed,team-users,add-user}.ts      Seeding + allowlist scripts.
-scripts/{dev,predev}.mjs   Memory-safe dev supervisor (see §8).
+scripts/{dev,predev,dev-cache}.mjs   Memory-safe dev supervisor + corrupt-.next auto-clean (§8).
+scripts/release-notes.ts   Prints the latest release as a WhatsApp announcement.
+docs/ACCESS.md             Role/permission reference.
+PLAN-notifications.md      Notifications plan (in-app shipped; email/WhatsApp pending).
 render.yaml, DEPLOY.md     Deployment.
 ```
 
 ### Data model (Prisma enums in CAPS)
-User(role: ADMIN|MEMBER) · Account · Session · VerificationToken · Client · Product ·
-Project · ProjectProduct · ProjectMember(role: OWNER|EDITOR|VIEWER) · WorkflowStatus ·
-Task(priority: LOW|MEDIUM|HIGH|URGENT) · Tag · TaskTag · Comment ·
-TaskActivity(type: CREATED|UPDATED|STATUS_CHANGED|COMMENTED).
+User(role: ADMIN|MEMBER, disabled) · Account · Session · VerificationToken · Client ·
+Product · Project · ProjectProduct · ProjectMember(role: OWNER|EDITOR|VIEWER) ·
+WorkflowStatus(kind: NORMAL|DELETED) · Task(priority: LOW|MEDIUM|HIGH|URGENT) · Tag ·
+TaskTag · Comment(parentId → single-level reply threading) · Attachment ·
+TaskActivity(type: CREATED|UPDATED|STATUS_CHANGED|COMMENTED|COMMENT_DELETED|DELETED|RESTORED) ·
+Notification(type: TASK_ASSIGNED|MENTIONED_IN_DESCRIPTION|MENTIONED_IN_COMMENT|
+COMMENT_ON_ASSIGNED_TASK|COMMENT_ON_OWNED_TASK).
 
 ## 4. Coding patterns (match these)
 - **Data flow = Server Components + Server Actions.** Read data in async server
@@ -76,6 +84,12 @@ TaskActivity(type: CREATED|UPDATED|STATUS_CHANGED|COMMENTED).
   javascript:). Render with `dangerouslySetInnerHTML` inside `.comment-html`.
 - **Activity logging:** write `TaskActivity` rows on create / field-diffs / status
   moves / comments (see `tasks.ts`, `comments.ts`). Keep it centralized in the action.
+- **Notifications:** after a mutation, call `notify()` (`src/lib/notify.ts`) — best-effort
+  (never breaks the action), excludes the actor, and collapses one event into a single
+  notification per person by priority. Mention ids come from `extractMentionIds()`.
+- **@-mentions:** the Tiptap editor (`rich-text-editor.tsx`, opt-in `mention` prop) inserts
+  `<span data-type="mention" data-id=…>` chips; the sanitizer allowlists them; the picker is
+  scoped to project members via `searchMentionables`. Used in comments and task descriptions.
 - **Styling:** use the monday-ish design tokens (`bg-surface`, `text-ink`,
   `text-muted`, `border-border`, `bg-primary`, status colors) from `globals.css`;
   `cn()` from `@/lib/utils` to merge classes; **lucide-react** icons. Keep components
@@ -145,14 +159,56 @@ allowlist current) + `next start`. Set `AUTH_GOOGLE_ID/SECRET` and `AUTH_URL`
 (= the public URL) in the dashboard, and register that URL's
 `/api/auth/callback/google` in Google Console. Full steps in `DEPLOY.md`.
 Live: https://rekayasa-task-tracker.onrender.com
+(custom domain: https://tasktracker.rekayasa.io — same Render service/DB)
 
 ## 11. Known gaps / TODO (good next tasks)
-- **Uploads aren't persistent on Render free tier** (ephemeral disk) → move image
-  storage to Cloudflare R2 / S3, or attach a paid Render Disk.
-- **Task delete is a permanent hard delete with no confirmation** → add a confirm
-  dialog and/or soft-delete (archive + restore).
+- **Notifications — email & WhatsApp** are not built yet (in-app is). See §13.
+- **Real-time bell:** the notification count polls every ~50s; a logged-in user can wait up
+  to that long for a new badge. Lower the interval or add SSE/WebSocket for instant updates.
+- **Project delete is a permanent hard delete** (Settings → Delete project) with no
+  confirm/soft-delete — unlike *task* delete, which is now recoverable. Consider matching it.
 - **No automated tests** yet — only typecheck + manual smoke tests. Adding Vitest/
-  Playwright for access-control rules and activity logging would pay off.
-- **No admin UI to manage the allowlist** — users are added via the script/seed.
+  Playwright for access-control rules + notification dedup would pay off.
+- **Prod DB external access** was open to the internet (`0.0.0.0/0`); lock it down in
+  Render Access Control (the app uses the internal connection).
 - Ignore the sibling decoy folders `RKYS-TaskTracker` / `RKYS-TaskTracker2` (old
   attempts); the live project is this folder only.
+
+## 12. What shipped on 2026-06-25 (recent feature batch, all merged + deployed)
+- **Threaded comment replies + @mentions.** Single-level reply threading; `@`-mention
+  project members in **comments and task descriptions** (Tiptap mention extension; mentions
+  stored as sanitized spans). Replies pre-fill an `@author` mention so flat threads stay clear.
+- **Recoverable task delete.** "Delete" now moves a task to a per-project **Deleted**
+  WorkflowStatus column (`kind=DELETED`, pinned last, OWNER/admin-only, locked in the editor)
+  instead of hard-deleting. `deleteTask`/`restoreTask`; permissions: OWNER/admin any, EDITOR
+  own only, VIEWER none. Confirmation dialog on delete.
+- **App versioning + "What's new".** `src/lib/releases.ts` is the single source (latest entry
+  = the version shown in the sidebar badge + the auto "What's new" modal). `npm run
+  release-notes` prints a WhatsApp-ready announcement. **Release flow:** add a `releases.ts`
+  entry → bump `package.json` (`npm version`) → merge → `npm run release-notes`.
+- **In-app notifications (Phase A).** Bell in the top-right header; see §13.
+- **Smaller UX:** "Assign to me" button + a People meta row (creator/assignee) on the task
+  detail; **Copy-link** buttons (project + task) so shared URLs don't get truncated; a friendly
+  "request access" page (names the owners) instead of a bare 404 for non-members; rebrand to
+  **Rekayasa Task Tracker** with a **RAD** logo mark.
+- **Dev safety:** `predev` auto-clears a corrupt `.next` cache after an unclean dev exit
+  (the build-worker "fork bomb" was a corrupt-cache symptom). See `scripts/dev-cache.mjs`.
+- **`docs/ACCESS.md`** documents the full role/permission model.
+
+## 13. Notifications roadmap (see `PLAN-notifications.md` for detail)
+Five triggers, three channels. Built in phases.
+- **Phase A — in-app (DONE).** `Notification` model; triggers in `createTask`/`updateTask`
+  (new assignee + newly-added description mentions) and `addComment` (mentions + assignee +
+  owner). `notify()` excludes the actor and dedups per person. Bell UI with unread badge +
+  dropdown + mark-read + ~50s polling.
+- **Phase B — email (TODO, `feat/notifications-email`).** SMTP from the **paid** Render web
+  service (465/587 work on paid; port 25 blocked everywhere). Render has **no mail server** —
+  use an external SMTP provider's creds via `nodemailer`, verify the sending domain
+  (SPF/DKIM). Use the `Notification` rows as an **outbox** + a **Render cron** that sends
+  per-user **digests** (avoid one-email-per-event), with an `emailSentAt` column. Add a
+  `User.emailNotifications` pref + a Notifications settings section.
+- **Phase C — WhatsApp (TODO, `feat/notifications-whatsapp`).** Self-hosted **GOWA**
+  (`aldinokemal/go-whatsapp-web-multidevice`, Docker, link a number by QR, POST to its REST
+  API). ⚠️ Unofficial → real **account-ban risk**; keep sends behind a `sendWhatsApp()`
+  abstraction so swapping to the official WhatsApp Business Cloud API later is a one-file
+  change. Add `User.phone` + `whatsappNotifications` pref; the outbox worker also dispatches WA.
