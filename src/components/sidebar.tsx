@@ -14,8 +14,8 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="border-b border-border px-5 py-3">
         <div className="flex items-start gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-            T
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-[11px] font-bold tracking-tight text-white">
+            RAD
           </div>
           <div className="min-w-0">
             <span className="block text-sm font-bold leading-tight text-ink">

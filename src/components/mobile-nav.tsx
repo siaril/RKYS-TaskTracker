@@ -39,8 +39,8 @@ export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
           <aside className="relative flex h-full w-64 flex-col bg-surface shadow-xl">
             <div className="flex h-14 items-center justify-between border-b border-border px-4">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-                  T
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[11px] font-bold tracking-tight text-white">
+                  RAD
                 </div>
                 <span className="text-sm font-bold text-ink">Rekayasa Task Tracker</span>
               </div>
