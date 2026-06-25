@@ -1,12 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { X } from "lucide-react";
-import { Avatar } from "@/components/avatar";
-import { CommentEditor } from "@/components/comments/comment-editor";
-import { getTaskComments, deleteComment } from "@/lib/actions/comments";
-import type { CommentDTO } from "@/lib/comment-types";
-import { formatDateTime } from "@/lib/format";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 export function CommentDrawer({
   taskId,
@@ -17,16 +13,6 @@ export function CommentDrawer({
   taskTitle: string;
   onClose: () => void;
 }) {
-  const [comments, setComments] = useState<CommentDTO[] | null>(null);
-
-  const load = useCallback(() => {
-    getTaskComments(taskId).then((res) => setComments(res.comments ?? []));
-  }, [taskId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -34,13 +20,6 @@ export function CommentDrawer({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-
-  async function remove(id: string) {
-    const fd = new FormData();
-    fd.set("id", id);
-    await deleteComment(fd);
-    load();
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -64,44 +43,7 @@ export function CommentDrawer({
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {comments === null ? (
-            <p className="text-sm text-muted">Loading…</p>
-          ) : comments.length === 0 ? (
-            <p className="text-sm text-muted">No comments yet. Start the discussion.</p>
-          ) : (
-            <ul className="space-y-4">
-              {comments.map((c) => (
-                <li key={c.id} className="flex gap-3">
-                  <Avatar src={c.authorImage} name={c.authorName} size={32} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-ink">{c.authorName}</span>
-                      <span className="text-xs text-muted">
-                        {formatDateTime(new Date(c.createdAt))}
-                      </span>
-                      {c.canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => remove(c.id)}
-                          className="ml-auto text-xs text-muted hover:text-negative"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                    <div
-                      className="comment-html mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
-                      dangerouslySetInnerHTML={{ __html: c.bodyHtml }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="border-t border-border p-3">
-          <CommentEditor taskId={taskId} onPosted={load} />
+          <CommentThread taskId={taskId} />
         </div>
       </aside>
     </div>
