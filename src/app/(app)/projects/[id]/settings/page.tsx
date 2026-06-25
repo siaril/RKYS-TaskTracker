@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Trash2, X, ChevronUp, ChevronDown, Check, Plus } from "lucide-react";
+import { Trash2, X, ChevronUp, ChevronDown, Check, Plus, Lock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast } from "@/lib/access";
@@ -31,7 +31,7 @@ export default async function ProjectSettingsPage({
         orderBy: [{ role: "asc" }, { createdAt: "asc" }],
         include: { user: { select: { id: true, name: true, email: true, image: true } } },
       },
-      statuses: { orderBy: { position: "asc" } },
+      statuses: { orderBy: [{ kind: "asc" }, { position: "asc" }] },
     },
   });
   if (!project) notFound();
@@ -41,6 +41,9 @@ export default async function ProjectSettingsPage({
 
   const canEdit = atLeast(access.role, "EDITOR");
   const canManage = atLeast(access.role, "OWNER");
+  // The Deleted column is system-managed — not editable/reorderable/deletable.
+  const normalStatuses = project.statuses.filter((s) => s.kind === "NORMAL");
+  const deletedStatus = project.statuses.find((s) => s.kind === "DELETED");
 
   const memberUserIds = project.members.map((m) => m.userId);
   const [clients, products, addableUsers] = await Promise.all([
@@ -225,7 +228,7 @@ export default async function ProjectSettingsPage({
           )}
 
           <ul className="space-y-2">
-            {project.statuses.map((s, i) => (
+            {normalStatuses.map((s, i) => (
               <li key={s.id} className="flex items-center gap-2">
                 <form action={updateStatus} className="flex flex-1 items-center gap-2">
                   <input type="hidden" name="id" value={s.id} />
@@ -269,7 +272,7 @@ export default async function ProjectSettingsPage({
                   <input type="hidden" name="direction" value="down" />
                   <button
                     type="submit"
-                    disabled={i === project.statuses.length - 1}
+                    disabled={i === normalStatuses.length - 1}
                     aria-label="Move down"
                     className="flex h-9 w-8 items-center justify-center rounded-lg text-muted hover:bg-app disabled:opacity-30"
                   >
@@ -289,6 +292,20 @@ export default async function ProjectSettingsPage({
               </li>
             ))}
           </ul>
+
+          {/* System Deleted column — locked (always last, owners-only on the board). */}
+          {deletedStatus && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: deletedStatus.color }}
+              />
+              <span className="text-sm font-medium text-ink">{deletedStatus.name}</span>
+              <span className="ml-auto flex items-center gap-1 text-xs text-muted">
+                <Lock className="h-3.5 w-3.5" /> System column · owners only
+              </span>
+            </div>
+          )}
 
           <form
             action={createStatus}

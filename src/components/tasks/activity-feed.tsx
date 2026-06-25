@@ -3,7 +3,14 @@ import { formatDateTime } from "@/lib/format";
 
 export type ActivityItem = {
   id: string;
-  type: "CREATED" | "UPDATED" | "STATUS_CHANGED" | "COMMENTED" | "COMMENT_DELETED";
+  type:
+    | "CREATED"
+    | "UPDATED"
+    | "STATUS_CHANGED"
+    | "COMMENTED"
+    | "COMMENT_DELETED"
+    | "DELETED"
+    | "RESTORED";
   field: string | null;
   oldValue: string | null;
   newValue: string | null;
@@ -15,6 +22,8 @@ function describe(a: ActivityItem): string {
   if (a.type === "CREATED") return "created this task";
   if (a.type === "COMMENTED") return "added a comment";
   if (a.type === "COMMENT_DELETED") return "deleted a comment";
+  if (a.type === "DELETED") return "deleted this task";
+  if (a.type === "RESTORED") return "restored this task";
   if (a.type === "STATUS_CHANGED") return `moved status from ${a.oldValue} to ${a.newValue}`;
   switch (a.field) {
     case "title":

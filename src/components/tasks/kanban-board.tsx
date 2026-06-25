@@ -35,7 +35,7 @@ export type BoardTask = {
   commentCount: number;
   canModify: boolean; // may this user drag/move this specific card?
 };
-type Status = { id: string; name: string; color: string };
+type Status = { id: string; name: string; color: string; kind: "NORMAL" | "DELETED" };
 
 export function KanbanBoard({
   projectId,
@@ -75,6 +75,9 @@ export function KanbanBoard({
     const from = columnOf(String(active.id));
     const to = String(over.id);
     if (!from || !columns[to] || from === to) return;
+    // Deleting is done via the Delete button (with confirmation), not by drag.
+    // Dragging a card OUT of Deleted is allowed and restores it (server-side).
+    if (statuses.find((s) => s.id === to)?.kind === "DELETED") return;
     const task = columns[from].find((t) => t.id === active.id);
     if (!task) return;
     setColumns((prev) => ({
@@ -171,6 +174,9 @@ function Column({
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: status.color }} />
         <span className="text-sm font-semibold text-ink">{status.name}</span>
         <span className="text-xs text-muted">{count}</span>
+        {status.kind === "DELETED" && (
+          <span className="ml-auto text-[11px] text-muted">owners only · drag out to restore</span>
+        )}
       </div>
       <div
         ref={setNodeRef}

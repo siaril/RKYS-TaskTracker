@@ -24,12 +24,14 @@ export default async function ProjectTasksPage({
   const access = await getProjectAccess(id, user);
   if (!access) notFound();
   const canEdit = atLeast(access.role, "EDITOR");
+  // Only OWNERs/admins can see the Deleted column and the tasks inside it.
+  const isOwner = access.isAdmin || access.role === "OWNER";
 
-  const [statuses, projectTags, tasks] = await Promise.all([
+  const [allStatuses, projectTags, tasks] = await Promise.all([
     prisma.workflowStatus.findMany({
       where: { projectId: id },
-      orderBy: { position: "asc" },
-      select: { id: true, name: true, color: true },
+      orderBy: [{ kind: "asc" }, { position: "asc" }], // NORMAL columns first, Deleted last
+      select: { id: true, name: true, color: true, kind: true },
     }),
     prisma.tag.findMany({
       where: { projectId: id },
@@ -40,6 +42,8 @@ export default async function ProjectTasksPage({
       where: {
         projectId: id,
         ...(activeTag ? { tags: { some: { tagId: activeTag } } } : {}),
+        // Non-owners never see deleted tasks.
+        ...(isOwner ? {} : { status: { kind: "NORMAL" } }),
       },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       include: {
@@ -49,6 +53,14 @@ export default async function ProjectTasksPage({
       },
     }),
   ]);
+
+  // Owners get the Deleted column; everyone else only the normal columns.
+  const statuses = isOwner ? allStatuses : allStatuses.filter((s) => s.kind === "NORMAL");
+  const deletedStatusIds = new Set(
+    allStatuses.filter((s) => s.kind === "DELETED").map((s) => s.id),
+  );
+  // Headline count = active (non-deleted) tasks only.
+  const activeCount = tasks.filter((t) => !deletedStatusIds.has(t.statusId)).length;
 
   const tasksByStatus: Record<string, BoardTask[]> = {};
   for (const s of statuses) tasksByStatus[s.id] = [];
@@ -73,7 +85,7 @@ export default async function ProjectTasksPage({
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm text-muted">
-          {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+          {activeCount} {activeCount === 1 ? "task" : "tasks"}
           {activeTag ? " (filtered)" : ""}
         </p>
         {canEdit && (

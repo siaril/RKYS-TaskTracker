@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, atLeast, isAdmin } from "@/lib/access";
-import { DEFAULT_STATUSES } from "@/lib/default-statuses";
+import { DEFAULT_STATUSES, DELETE_STATUS } from "@/lib/default-statuses";
 
 export type FormState = { error?: string } | undefined;
 
@@ -40,13 +40,21 @@ export async function createProject(_prev: FormState, formData: FormData): Promi
       products: { create: products.map((productId) => ({ productId })) },
       // Creator becomes the project owner.
       members: { create: { userId: user.id, role: "OWNER" } },
-      // Seed the default workflow statuses.
+      // Seed the default workflow statuses + the system Deleted column (last).
       statuses: {
-        create: DEFAULT_STATUSES.map((s, i) => ({
-          name: s.name,
-          color: s.color,
-          position: i,
-        })),
+        create: [
+          ...DEFAULT_STATUSES.map((s, i) => ({
+            name: s.name,
+            color: s.color,
+            position: i,
+          })),
+          {
+            name: DELETE_STATUS.name,
+            color: DELETE_STATUS.color,
+            position: DEFAULT_STATUSES.length,
+            kind: "DELETED" as const,
+          },
+        ],
       },
     },
   });

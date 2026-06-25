@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Paperclip, Download, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Paperclip, Download, X, Trash2, RotateCcw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, canModifyTask, isAdmin } from "@/lib/access";
+import { getProjectAccess, canModifyTask, canDeleteTask, isAdmin } from "@/lib/access";
 import { TaskForm } from "@/components/tasks/task-form";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
 import { TagChips } from "@/components/tasks/tag-chips";
@@ -11,7 +11,7 @@ import { Avatar } from "@/components/avatar";
 import { CommentEditor } from "@/components/comments/comment-editor";
 import { ActivityFeed } from "@/components/tasks/activity-feed";
 import { TaskAttachmentUploader } from "@/components/tasks/task-attachment-uploader";
-import { updateTask, deleteTask } from "@/lib/actions/tasks";
+import { updateTask, deleteTask, restoreTask } from "@/lib/actions/tasks";
 import { deleteComment } from "@/lib/actions/comments";
 import { deleteTaskAttachment } from "@/lib/actions/attachments";
 import { formatDueDate, toDateInputValue, formatDateTime } from "@/lib/format";
@@ -53,11 +53,16 @@ export default async function TaskDetailPage({
     { ownerId: task.ownerId, assigneeId: task.assigneeId },
     user.id,
   );
+  const isOwner = access.isAdmin || access.role === "OWNER";
+  const isDeleted = task.status.kind === "DELETED";
+  // Deleted tasks are only visible to owners/admins.
+  if (isDeleted && !isOwner) notFound();
+  const canDelete = canDeleteTask(access, { ownerId: task.ownerId }, user.id) && !isDeleted;
 
   const [statuses, members, projectTags] = await Promise.all([
     canEdit
       ? prisma.workflowStatus.findMany({
-          where: { projectId: id },
+          where: { projectId: id, kind: "NORMAL" }, // Deleted isn't a manual dropdown option
           orderBy: { position: "asc" },
           select: { id: true, name: true, color: true },
         })
@@ -107,12 +112,31 @@ export default async function TaskDetailPage({
         <ArrowLeft className="h-4 w-4" /> Back to tasks
       </Link>
 
+      {isDeleted && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-app px-4 py-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Trash2 className="h-4 w-4 shrink-0 text-muted" />
+            <span className="font-medium text-ink">This task is in the Deleted column.</span>
+            <span className="text-muted">Only owners can see it.</span>
+          </div>
+          <form action={restoreTask}>
+            <input type="hidden" name="id" value={task.id} />
+            <button
+              type="submit"
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+            >
+              <RotateCcw className="h-4 w-4" /> Restore task
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         {/* Details */}
         <section>
           <h2 className="mb-3 text-base font-semibold text-ink">Details</h2>
           <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
-        {canEdit ? (
+        {canEdit && !isDeleted ? (
           <TaskForm
             action={updateTask}
             projectId={id}
@@ -132,6 +156,7 @@ export default async function TaskDetailPage({
             submitLabel="Save changes"
             cancelHref={`/projects/${id}`}
             deleteAction={deleteTask}
+            canDelete={canDelete}
           />
         ) : (
           <div className="space-y-4">
@@ -166,7 +191,9 @@ export default async function TaskDetailPage({
             {task.tags.length > 0 && (
               <TagChips tags={task.tags.map((tt) => ({ name: tt.tag.name, color: tt.tag.color }))} />
             )}
-            <p className="text-xs text-muted">You have view-only access to this project.</p>
+            {!canEdit && (
+              <p className="text-xs text-muted">You have view-only access to this project.</p>
+            )}
           </div>
         )}
             <p className="mt-4 border-t border-border pt-3 text-xs text-muted">

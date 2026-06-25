@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, atLeast, canModifyTask, type SessionUser } from "@/lib/access";
+import {
+  getProjectAccess,
+  atLeast,
+  canModifyTask,
+  canDeleteTask,
+  type SessionUser,
+} from "@/lib/access";
 import { formatDueDate } from "@/lib/format";
 import { cleanHtml, hasHtmlContent } from "@/lib/sanitize";
 
@@ -239,7 +245,9 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
   redirect(`/projects/${old.projectId}?toast=saved`);
 }
 
-/** Board drag: move a task to another status column (appended to the end). */
+/** Board drag: move a task to another status column (appended to the end).
+ *  - Dragging INTO the Deleted column is disabled (use the Delete button).
+ *  - Dragging a task OUT of Deleted is a restore (OWNER/admin only). */
 export async function moveTask(input: {
   taskId: string;
   projectId: string;
@@ -251,7 +259,7 @@ export async function moveTask(input: {
 
   const status = await prisma.workflowStatus.findFirst({
     where: { id: input.toStatusId, projectId: input.projectId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, kind: true },
   });
   if (!status) return;
 
@@ -263,12 +271,22 @@ export async function moveTask(input: {
       statusId: true,
       ownerId: true,
       assigneeId: true,
-      status: { select: { name: true } },
+      status: { select: { name: true, kind: true } },
     },
   });
   if (!task) return;
-  if (!canModifyTask(access, { ownerId: task.ownerId, assigneeId: task.assigneeId }, user.id)) return;
   if (task.statusId === input.toStatusId) return; // no-op
+
+  // Deletion only happens via the Delete button (confirmation) — not by drag.
+  if (status.kind === "DELETED") return;
+
+  const restoring = task.status.kind === "DELETED";
+  if (restoring) {
+    // Only OWNER/admin see the Deleted column, so only they can restore.
+    if (!(access.isAdmin || access.role === "OWNER")) return;
+  } else if (!canModifyTask(access, { ownerId: task.ownerId, assigneeId: task.assigneeId }, user.id)) {
+    return;
+  }
 
   const position = await prisma.task.count({
     where: { projectId: input.projectId, statusId: input.toStatusId },
@@ -281,7 +299,7 @@ export async function moveTask(input: {
       activities: {
         create: {
           userId: user.id,
-          type: "STATUS_CHANGED",
+          type: restoring ? "RESTORED" : "STATUS_CHANGED",
           field: "status",
           oldValue: task.status.name,
           newValue: status.name,
@@ -292,6 +310,8 @@ export async function moveTask(input: {
   revalidatePath(`/projects/${input.projectId}`);
 }
 
+/** "Delete" a task = move it to the project's Deleted column (no data loss).
+ *  Permission: OWNER/admin any task, EDITOR own only, VIEWER none. */
 export async function deleteTask(formData: FormData) {
   const user = await requireUser();
   const id = str(formData.get("id"));
@@ -299,15 +319,92 @@ export async function deleteTask(formData: FormData) {
 
   const task = await prisma.task.findUnique({
     where: { id },
-    select: { projectId: true, ownerId: true, assigneeId: true },
+    select: {
+      projectId: true,
+      ownerId: true,
+      statusId: true,
+      status: { select: { name: true, kind: true } },
+    },
   });
   if (!task) redirect("/projects");
   const access = await getProjectAccess(task.projectId, user);
-  if (!access || !canModifyTask(access, { ownerId: task.ownerId, assigneeId: task.assigneeId }, user.id)) {
+  if (!access || !canDeleteTask(access, { ownerId: task.ownerId }, user.id)) {
     redirect(`/projects/${task.projectId}`);
   }
+  if (task.status.kind === "DELETED") redirect(`/projects/${task.projectId}`); // already deleted
 
-  await prisma.task.delete({ where: { id } });
+  const deletedStatus = await prisma.workflowStatus.findFirst({
+    where: { projectId: task.projectId, kind: "DELETED" },
+    select: { id: true, name: true },
+  });
+  if (!deletedStatus) redirect(`/projects/${task.projectId}`); // safety: no column
+
+  const position = await prisma.task.count({
+    where: { projectId: task.projectId, statusId: deletedStatus.id },
+  });
+  await prisma.task.update({
+    where: { id },
+    data: {
+      statusId: deletedStatus.id,
+      position,
+      activities: {
+        create: {
+          userId: user.id,
+          type: "DELETED",
+          field: "status",
+          oldValue: task.status.name,
+          newValue: deletedStatus.name,
+        },
+      },
+    },
+  });
   revalidatePath(`/projects/${task.projectId}`);
   redirect(`/projects/${task.projectId}?toast=deleted`);
+}
+
+/** Restore a deleted task to the first normal column. OWNER/admin only. */
+export async function restoreTask(formData: FormData) {
+  const user = await requireUser();
+  const id = str(formData.get("id"));
+  if (!id) return;
+
+  const task = await prisma.task.findUnique({
+    where: { id },
+    select: { projectId: true, status: { select: { name: true, kind: true } } },
+  });
+  if (!task) redirect("/projects");
+  const access = await getProjectAccess(task.projectId, user);
+  if (!access || !(access.isAdmin || access.role === "OWNER")) {
+    redirect(`/projects/${task.projectId}`);
+  }
+  if (task.status.kind !== "DELETED") redirect(`/projects/${task.projectId}/tasks/${id}`);
+
+  const target = await prisma.workflowStatus.findFirst({
+    where: { projectId: task.projectId, kind: "NORMAL" },
+    orderBy: { position: "asc" },
+    select: { id: true, name: true },
+  });
+  if (!target) redirect(`/projects/${task.projectId}`);
+
+  const position = await prisma.task.count({
+    where: { projectId: task.projectId, statusId: target.id },
+  });
+  await prisma.task.update({
+    where: { id },
+    data: {
+      statusId: target.id,
+      position,
+      activities: {
+        create: {
+          userId: user.id,
+          type: "RESTORED",
+          field: "status",
+          oldValue: task.status.name,
+          newValue: target.name,
+        },
+      },
+    },
+  });
+  revalidatePath(`/projects/${task.projectId}`);
+  redirect(`/projects/${task.projectId}?toast=restored`);
 }

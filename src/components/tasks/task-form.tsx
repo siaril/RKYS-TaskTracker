@@ -30,6 +30,7 @@ type Props = {
   submitLabel: string;
   cancelHref: string;
   deleteAction?: (formData: FormData) => void | Promise<void>;
+  canDelete?: boolean;
 };
 
 const inputCls =
@@ -45,10 +46,12 @@ export function TaskForm({
   submitLabel,
   cancelHref,
   deleteAction,
+  canDelete,
 }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
   const selectedTags = new Set(defaults?.tagIds ?? []);
   const [description, setDescription] = useState(defaults?.description ?? "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -161,17 +164,52 @@ export function TaskForm({
         >
           Cancel
         </Link>
-        {defaults?.id && deleteAction && (
+        {defaults?.id && deleteAction && canDelete && (
           <button
-            type="submit"
-            formAction={deleteAction}
-            formNoValidate
+            type="button"
+            onClick={() => setConfirmDelete(true)}
             className="ml-auto flex h-10 items-center gap-1.5 rounded-lg bg-negative px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             <Trash2 className="h-4 w-4" /> Delete task
           </button>
         )}
       </div>
+
+      {confirmDelete && deleteAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Cancel"
+            onClick={() => setConfirmDelete(false)}
+            className="absolute inset-0 bg-black/40"
+          />
+          <div className="relative w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl">
+            <h3 className="text-base font-bold text-ink">Delete this task?</h3>
+            <p className="mt-1.5 text-sm text-muted">
+              It moves to the project&apos;s{" "}
+              <span className="font-medium text-ink">Deleted</span> column. An owner can
+              restore it later — nothing is permanently removed.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                formAction={deleteAction}
+                formNoValidate
+                className="flex h-9 items-center gap-1.5 rounded-lg bg-negative px-4 text-sm font-semibold text-white hover:opacity-90"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

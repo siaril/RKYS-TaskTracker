@@ -41,10 +41,11 @@ export async function updateStatus(formData: FormData) {
   const color = str(formData.get("color")) || DEFAULT_COLOR;
   const status = await prisma.workflowStatus.findUnique({
     where: { id },
-    select: { projectId: true },
+    select: { projectId: true, kind: true },
   });
   if (!status) redirect("/projects");
   if (!(await canManage(status.projectId, user))) redirect(settings(status.projectId));
+  if (status.kind === "DELETED") redirect(settings(status.projectId, "?error=locked-status"));
   if (!name) redirect(settings(status.projectId, "?error=status-name"));
 
   await prisma.workflowStatus.update({ where: { id }, data: { name, color } });
@@ -57,10 +58,11 @@ export async function deleteStatus(formData: FormData) {
   const id = str(formData.get("id"));
   const status = await prisma.workflowStatus.findUnique({
     where: { id },
-    select: { projectId: true },
+    select: { projectId: true, kind: true },
   });
   if (!status) redirect("/projects");
   if (!(await canManage(status.projectId, user))) redirect(settings(status.projectId));
+  if (status.kind === "DELETED") redirect(settings(status.projectId, "?error=locked-status"));
 
   const count = await prisma.workflowStatus.count({ where: { projectId: status.projectId } });
   if (count <= 1) redirect(settings(status.projectId, "?error=last-status"));
@@ -82,10 +84,11 @@ export async function moveStatus(formData: FormData) {
   const direction = str(formData.get("direction")); // "up" | "down"
   const status = await prisma.workflowStatus.findUnique({
     where: { id },
-    select: { projectId: true },
+    select: { projectId: true, kind: true },
   });
   if (!status) redirect("/projects");
   if (!(await canManage(status.projectId, user))) redirect(settings(status.projectId));
+  if (status.kind === "DELETED") redirect(settings(status.projectId, "?error=locked-status"));
 
   const list = await prisma.workflowStatus.findMany({
     where: { projectId: status.projectId },
@@ -99,6 +102,8 @@ export async function moveStatus(formData: FormData) {
 
   const a = list[idx];
   const b = list[swapIdx];
+  // Don't let a normal status be reordered past the Deleted column (stays last).
+  if (b.kind === "DELETED") redirect(settings(status.projectId));
   await prisma.$transaction([
     prisma.workflowStatus.update({ where: { id: a.id }, data: { position: b.position } }),
     prisma.workflowStatus.update({ where: { id: b.id }, data: { position: a.position } }),

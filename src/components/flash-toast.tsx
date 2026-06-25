@@ -7,7 +7,8 @@ import { CheckCircle2 } from "lucide-react";
 const MESSAGES: Record<string, string> = {
   saved: "Changes saved",
   created: "Created successfully",
-  deleted: "Deleted",
+  deleted: "Task moved to Deleted",
+  restored: "Task restored",
 };
 
 /**

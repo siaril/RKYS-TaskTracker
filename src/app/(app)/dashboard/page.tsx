@@ -20,8 +20,9 @@ export default async function DashboardPage() {
   const firstName = (user.name ?? "there").split(" ")[0];
 
   // All tasks assigned to me, with their status + project context.
+  // Deleted tasks (in a project's Deleted column) never show here.
   const assigned = await prisma.task.findMany({
-    where: { assigneeId: user.id },
+    where: { assigneeId: user.id, status: { kind: "NORMAL" } },
     include: {
       status: { select: { id: true, name: true, color: true, position: true } },
       project: { select: { id: true, name: true, client: { select: { name: true } } } },
@@ -35,7 +36,8 @@ export default async function DashboardPage() {
   if (projectIds.length > 0) {
     const grouped = await prisma.workflowStatus.groupBy({
       by: ["projectId"],
-      where: { projectId: { in: projectIds } },
+      // "Done" = the last NORMAL column; the Deleted column must not count here.
+      where: { projectId: { in: projectIds }, kind: "NORMAL" },
       _max: { position: true },
     });
     for (const g of grouped) maxByProject.set(g.projectId, g._max.position ?? 0);

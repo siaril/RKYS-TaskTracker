@@ -34,6 +34,15 @@ enum ActivityType {
   STATUS_CHANGED
   COMMENTED
   COMMENT_DELETED
+  DELETED
+  RESTORED
+}
+
+// Marks a workflow column's role. NORMAL = a regular board column; DELETED = the
+// system "Deleted" column (one per project, pinned last, OWNER-only-visible).
+enum StatusKind {
+  NORMAL
+  DELETED
 }
 
 model User {
@@ -164,11 +173,12 @@ model ProjectProduct {
 // Phase 4: per-project workflow statuses (configurable in Phase 5) + tasks.
 
 model WorkflowStatus {
-  id        String  @id @default(cuid())
+  id        String     @id @default(cuid())
   projectId String
   name      String
-  color     String  @default("#c4c4c4")
+  color     String     @default("#c4c4c4")
   position  Int
+  kind      StatusKind @default(NORMAL)
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   Task[]

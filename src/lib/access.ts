@@ -46,6 +46,19 @@ export function canModifyTask(
   return false;
 }
 
+/** Whether a user may delete (move to the Deleted column) a specific task.
+ *  Admins and project OWNERs can delete any task; EDITORs only tasks they
+ *  created (own); VIEWERs cannot. Stricter than canModifyTask (no assignee). */
+export function canDeleteTask(
+  access: ProjectAccess,
+  task: { ownerId: string },
+  userId: string,
+): boolean {
+  if (access.isAdmin || access.role === "OWNER") return true;
+  if (access.role === "EDITOR") return task.ownerId === userId;
+  return false;
+}
+
 /** Prisma `where` clause limiting projects to those a user may see. */
 export function visibleProjectsWhere(user: SessionUser) {
   return isAdmin(user) ? {} : { members: { some: { userId: user.id } } };
