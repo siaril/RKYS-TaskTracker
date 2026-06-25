@@ -15,6 +15,7 @@ import { TaskAttachmentUploader } from "@/components/tasks/task-attachment-uploa
 import { updateTask, deleteTask, restoreTask, assignToMe } from "@/lib/actions/tasks";
 import { deleteTaskAttachment } from "@/lib/actions/attachments";
 import { FlashToast } from "@/components/flash-toast";
+import { CopyLinkButton } from "@/components/copy-link-button";
 import { formatDueDate, toDateInputValue } from "@/lib/format";
 
 function formatBytes(n: number): string {
@@ -111,12 +112,15 @@ export default async function TaskDetailPage({
   return (
     <div className="w-full">
       <FlashToast type={sp.toast} />
-      <Link
-        href={`/projects/${id}`}
-        className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to tasks
-      </Link>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <Link
+          href={`/projects/${id}`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to tasks
+        </Link>
+        <CopyLinkButton path={`/projects/${id}/tasks/${task.id}`} />
+      </div>
 
       {isDeleted && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-app px-4 py-3">
