@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/sidebar";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
 import { WhatsNew } from "@/components/whats-new";
+import { NotificationBell } from "@/components/notification-bell";
 import { requireUser } from "@/lib/session";
 
 export default async function AppLayout({
@@ -21,11 +22,14 @@ export default async function AppLayout({
             <MobileNav isAdmin={isAdmin} />
             <span className="text-sm font-semibold text-muted">Workspace</span>
           </div>
-          <UserMenu
-            name={user.name ?? "User"}
-            email={user.email ?? ""}
-            image={user.image ?? null}
-          />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <UserMenu
+              name={user.name ?? "User"}
+              email={user.email ?? ""}
+              image={user.image ?? null}
+            />
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>

@@ -13,6 +13,8 @@ import {
 } from "@/lib/access";
 import { formatDueDate } from "@/lib/format";
 import { cleanHtml, hasHtmlContent } from "@/lib/sanitize";
+import { notify } from "@/lib/notify";
+import { extractMentionIds } from "@/lib/mentions-extract";
 
 /** Sanitize a rich-text description; empty content becomes null. */
 function cleanDescription(raw: string): string | null {
@@ -130,7 +132,19 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
       activities: { create: { userId: user.id, type: "CREATED" } },
     },
   });
-  void created;
+  // Notify the assignee (if any) and anyone @mentioned in the description.
+  await notify({
+    actorId: user.id,
+    taskId: created.id,
+    projectId,
+    candidates: [
+      ...(assigneeId ? [{ userId: assigneeId, type: "TASK_ASSIGNED" as const }] : []),
+      ...extractMentionIds(description).map((userId) => ({
+        userId,
+        type: "MENTIONED_IN_DESCRIPTION" as const,
+      })),
+    ],
+  });
 
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}?toast=created`);
@@ -240,6 +254,24 @@ export async function updateTask(_prev: FormState, formData: FormData): Promise<
       })),
     });
   }
+
+  // Notify: a newly-set assignee, and anyone newly @mentioned in the description.
+  const oldMentions = new Set(extractMentionIds(old.description));
+  const newMentions = extractMentionIds(description).filter((m) => !oldMentions.has(m));
+  await notify({
+    actorId: user.id,
+    taskId: id,
+    projectId: old.projectId,
+    candidates: [
+      ...(assigneeId && assigneeId !== old.assigneeId
+        ? [{ userId: assigneeId, type: "TASK_ASSIGNED" as const }]
+        : []),
+      ...newMentions.map((userId) => ({
+        userId,
+        type: "MENTIONED_IN_DESCRIPTION" as const,
+      })),
+    ],
+  });
 
   revalidatePath(`/projects/${old.projectId}`);
   redirect(`/projects/${old.projectId}?toast=saved`);

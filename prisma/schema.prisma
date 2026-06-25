@@ -45,6 +45,14 @@ enum StatusKind {
   DELETED
 }
 
+enum NotificationType {
+  TASK_ASSIGNED
+  MENTIONED_IN_DESCRIPTION
+  MENTIONED_IN_COMMENT
+  COMMENT_ON_ASSIGNED_TASK
+  COMMENT_ON_OWNED_TASK
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -62,6 +70,8 @@ model User {
   comments      Comment[]
   activities    TaskActivity[]
   uploadedAttachments Attachment[]
+  notificationsReceived  Notification[] @relation("NotificationUser")
+  notificationsTriggered Notification[] @relation("NotificationActor")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -208,6 +218,7 @@ model Task {
   comments Comment[]
   activities TaskActivity[]
   attachments Attachment[]
+  notifications Notification[]
 
   @@index([projectId])
   @@index([statusId])
@@ -242,9 +253,30 @@ model Comment {
   author  User      @relation(fields: [authorId], references: [id])
   parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies Comment[] @relation("CommentReplies")
+  notifications Notification[]
 
   @@index([taskId])
   @@index([parentId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           // recipient
+  actorId   String           // who triggered it (never == userId)
+  type      NotificationType
+  taskId    String
+  projectId String            // denormalized, for building the task link
+  commentId String?           // set for the comment-related types
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user    User     @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor   User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 // Files attached to a task (documents/screenshots) — distinct from inline rich-text

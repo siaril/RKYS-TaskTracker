@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { getProjectAccess, isAdmin } from "@/lib/access";
 import { cleanHtml, hasHtmlContent } from "@/lib/sanitize";
+import { notify } from "@/lib/notify";
+import { extractMentionIds } from "@/lib/mentions-extract";
 import type { CommentDTO, CommentNode } from "@/lib/comment-types";
 
 export async function addComment(input: {
@@ -15,7 +17,7 @@ export async function addComment(input: {
   const user = await requireUser();
   const task = await prisma.task.findUnique({
     where: { id: input.taskId },
-    select: { projectId: true },
+    select: { projectId: true, assigneeId: true, ownerId: true },
   });
   if (!task) return { error: "Task not found." };
 
@@ -39,7 +41,7 @@ export async function addComment(input: {
     resolvedParentId = parent.parentId ?? parent.id;
   }
 
-  await prisma.comment.create({
+  const comment = await prisma.comment.create({
     data: {
       taskId: input.taskId,
       authorId: user.id,
@@ -50,6 +52,25 @@ export async function addComment(input: {
   await prisma.taskActivity.create({
     data: { taskId: input.taskId, userId: user.id, type: "COMMENTED" },
   });
+
+  // Notify: people @mentioned in the comment, plus the task's assignee and owner.
+  await notify({
+    actorId: user.id,
+    taskId: input.taskId,
+    projectId: task.projectId,
+    commentId: comment.id,
+    candidates: [
+      ...extractMentionIds(bodyHtml).map((userId) => ({
+        userId,
+        type: "MENTIONED_IN_COMMENT" as const,
+      })),
+      ...(task.assigneeId
+        ? [{ userId: task.assigneeId, type: "COMMENT_ON_ASSIGNED_TASK" as const }]
+        : []),
+      { userId: task.ownerId, type: "COMMENT_ON_OWNED_TASK" as const },
+    ],
+  });
+
   revalidatePath(`/projects/${task.projectId}/tasks/${input.taskId}`);
   return {};
 }
