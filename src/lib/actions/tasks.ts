@@ -408,3 +408,47 @@ export async function restoreTask(formData: FormData) {
   revalidatePath(`/projects/${task.projectId}`);
   redirect(`/projects/${task.projectId}?toast=restored`);
 }
+
+/** Self-assign a task ("take it over"). Any EDITOR+ on the project can do this —
+ *  it's how a member picks up an unassigned task (or one they need to own) so they
+ *  can then change its status (canModifyTask requires owner/assignee). */
+export async function assignToMe(formData: FormData) {
+  const user = await requireUser();
+  const id = str(formData.get("id"));
+  if (!id) return;
+
+  const task = await prisma.task.findUnique({
+    where: { id },
+    select: {
+      projectId: true,
+      assigneeId: true,
+      status: { select: { kind: true } },
+      assignee: { select: { name: true, email: true } },
+    },
+  });
+  if (!task) redirect("/projects");
+
+  const back = `/projects/${task.projectId}/tasks/${id}`;
+  const access = await getProjectAccess(task.projectId, user);
+  if (!access || !atLeast(access.role, "EDITOR")) redirect(back);
+  if (task.status.kind === "DELETED") redirect(back); // can't pick up a deleted task
+  if (task.assigneeId === user.id) redirect(back); // already mine
+
+  await prisma.task.update({
+    where: { id },
+    data: {
+      assigneeId: user.id,
+      activities: {
+        create: {
+          userId: user.id,
+          type: "UPDATED",
+          field: "assignee",
+          oldValue: task.assignee?.name ?? task.assignee?.email ?? "Unassigned",
+          newValue: user.name ?? user.email ?? "Me",
+        },
+      },
+    },
+  });
+  revalidatePath(back);
+  redirect(`${back}?toast=assigned`);
+}

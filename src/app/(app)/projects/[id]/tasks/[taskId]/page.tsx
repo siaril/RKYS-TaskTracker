@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Paperclip, Download, X, Trash2, RotateCcw } from "lucide-react";
+import { ArrowLeft, CalendarDays, Paperclip, Download, X, Trash2, RotateCcw, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getProjectAccess, canModifyTask, canDeleteTask } from "@/lib/access";
+import { getProjectAccess, canModifyTask, canDeleteTask, atLeast } from "@/lib/access";
 import { getTaskComments } from "@/lib/actions/comments";
 import { TaskForm } from "@/components/tasks/task-form";
 import { PriorityBadge, type Priority } from "@/components/tasks/priority-badge";
@@ -12,8 +12,9 @@ import { Avatar } from "@/components/avatar";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { ActivityFeed } from "@/components/tasks/activity-feed";
 import { TaskAttachmentUploader } from "@/components/tasks/task-attachment-uploader";
-import { updateTask, deleteTask, restoreTask } from "@/lib/actions/tasks";
+import { updateTask, deleteTask, restoreTask, assignToMe } from "@/lib/actions/tasks";
 import { deleteTaskAttachment } from "@/lib/actions/attachments";
+import { FlashToast } from "@/components/flash-toast";
 import { formatDueDate, toDateInputValue } from "@/lib/format";
 
 function formatBytes(n: number): string {
@@ -24,10 +25,13 @@ function formatBytes(n: number): string {
 
 export default async function TaskDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; taskId: string }>;
+  searchParams: Promise<{ toast?: string }>;
 }) {
   const { id, taskId } = await params;
+  const sp = await searchParams;
   const user = await requireUser();
 
   const access = await getProjectAccess(id, user);
@@ -38,7 +42,7 @@ export default async function TaskDetailPage({
     include: {
       status: true,
       assignee: { select: { name: true, email: true, image: true } },
-      owner: { select: { name: true, email: true } },
+      owner: { select: { name: true, email: true, image: true } },
       tags: { include: { tag: true } },
       attachments: {
         orderBy: { createdAt: "asc" },
@@ -58,6 +62,9 @@ export default async function TaskDetailPage({
   // Deleted tasks are only visible to owners/admins.
   if (isDeleted && !isOwner) notFound();
   const canDelete = canDeleteTask(access, { ownerId: task.ownerId }, user.id) && !isDeleted;
+  // Any EDITOR+ can take over a task they're not already assigned to.
+  const canSelfAssign =
+    atLeast(access.role, "EDITOR") && task.assigneeId !== user.id && !isDeleted;
 
   const [statuses, members, projectTags] = await Promise.all([
     canEdit
@@ -101,9 +108,9 @@ export default async function TaskDetailPage({
   }));
   const ownerName = task.owner.name ?? task.owner.email ?? "Unknown";
   const assigneeName = task.assignee?.name ?? task.assignee?.email ?? null;
-  // Comments are deletable only by their author or a global admin.
   return (
     <div className="w-full">
+      <FlashToast type={sp.toast} />
       <Link
         href={`/projects/${id}`}
         className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
@@ -135,6 +142,40 @@ export default async function TaskDetailPage({
         <section>
           <h2 className="mb-3 text-base font-semibold text-ink">Details</h2>
           <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            {/* People meta — visible at the top so it's clear who owns/handles this. */}
+            <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted">
+                  Created by
+                </span>
+                <Avatar src={task.owner.image} name={ownerName} size={24} />
+                <span className="text-sm font-semibold text-ink">{ownerName}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted">
+                  Assignee
+                </span>
+                {assigneeName ? (
+                  <span className="flex items-center gap-1.5">
+                    <Avatar src={task.assignee?.image} name={assigneeName} size={24} />
+                    <span className="text-sm font-semibold text-ink">{assigneeName}</span>
+                  </span>
+                ) : (
+                  <span className="text-sm text-muted">Unassigned</span>
+                )}
+                {canSelfAssign && (
+                  <form action={assignToMe}>
+                    <input type="hidden" name="id" value={task.id} />
+                    <button
+                      type="submit"
+                      className="ml-1 flex h-7 items-center gap-1 rounded-lg border border-primary/40 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" /> Assign to me
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
         {canEdit && !isDeleted ? (
           <TaskForm
             action={updateTask}
@@ -181,11 +222,6 @@ export default async function TaskDetailPage({
                   <CalendarDays className="h-3.5 w-3.5" /> {formatDueDate(task.dueDate)}
                 </span>
               )}
-              {assigneeName && (
-                <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <Avatar src={task.assignee?.image} name={assigneeName} size={20} /> {assigneeName}
-                </span>
-              )}
             </div>
             {task.tags.length > 0 && (
               <TagChips tags={task.tags.map((tt) => ({ name: tt.tag.name, color: tt.tag.color }))} />
@@ -195,9 +231,6 @@ export default async function TaskDetailPage({
             )}
           </div>
         )}
-            <p className="mt-4 border-t border-border pt-3 text-xs text-muted">
-              Created by {ownerName}
-            </p>
           </div>
 
           {/* Files / attachments */}

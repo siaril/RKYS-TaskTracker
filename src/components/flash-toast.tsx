@@ -9,6 +9,7 @@ const MESSAGES: Record<string, string> = {
   created: "Created successfully",
   deleted: "Task moved to Deleted",
   restored: "Task restored",
+  assigned: "Assigned to you",
 };
 
 /**
