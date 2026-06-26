@@ -26,6 +26,7 @@ export const RELEASES: Release[] = [
       "Delete tasks safely: a deleted task moves to a new Deleted column instead of being gone for good, and project owners can restore it.",
       "Take over a task with a new \"Assign to me\" button — and each task now shows who created it and who's assigned right at the top.",
       "Get notified: a bell in the top-right tells you when you're assigned a task, @mentioned, or someone comments on a task you're assigned to or created.",
+      "Notifications by email too: get a periodic digest of your new notifications, with a link straight to the task. Turn it off anytime in Settings.",
       "See the app version in the sidebar, plus a \"What's new\" popup whenever we ship an update.",
     ],
   },

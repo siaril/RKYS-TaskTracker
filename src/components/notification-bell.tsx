@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { cn } from "@/lib/utils";
+import { notificationMessage } from "@/lib/notification-text";
 import {
   getNotifications,
   getUnreadCount,
@@ -12,14 +13,6 @@ import {
   markAllNotificationsRead,
   type NotificationDTO,
 } from "@/lib/actions/notifications";
-
-const MESSAGES: Record<string, string> = {
-  TASK_ASSIGNED: "assigned you a task",
-  MENTIONED_IN_DESCRIPTION: "mentioned you in a task",
-  MENTIONED_IN_COMMENT: "mentioned you in a comment",
-  COMMENT_ON_ASSIGNED_TASK: "commented on a task assigned to you",
-  COMMENT_ON_OWNED_TASK: "commented on your task",
-};
 
 function timeAgo(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -147,7 +140,7 @@ export function NotificationBell() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-ink">
                           <span className="font-semibold">{n.actorName}</span>{" "}
-                          {MESSAGES[n.type] ?? "sent you a notification"}
+                          {notificationMessage(n.type)}
                         </p>
                         <p className="truncate text-xs text-muted">{n.taskTitle}</p>
                         <p className="mt-0.5 text-[11px] text-muted">{timeAgo(n.createdAt)}</p>

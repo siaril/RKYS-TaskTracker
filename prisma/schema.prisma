@@ -61,6 +61,7 @@ model User {
   image         String?
   role          UserRole  @default(MEMBER)
   disabled      Boolean   @default(false)
+  emailNotifications Boolean @default(true)
   accounts      Account[]
   sessions      Session[]
   createdProjects Project[] @relation("ProjectCreatedBy")
@@ -268,6 +269,7 @@ model Notification {
   projectId String            // denormalized, for building the task link
   commentId String?           // set for the comment-related types
   readAt    DateTime?
+  emailSentAt DateTime?        // outbox marker; null = not yet emailed
   createdAt DateTime         @default(now())
 
   user    User     @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)

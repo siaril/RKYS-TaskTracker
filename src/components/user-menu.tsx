@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Settings } from "lucide-react";
 import { doSignOut } from "@/lib/actions/auth";
 import { Avatar } from "@/components/avatar";
 
@@ -41,6 +42,14 @@ export function UserMenu({ name, email, image }: Props) {
             <p className="truncate text-sm font-semibold text-ink">{name}</p>
             <p className="truncate text-xs text-muted">{email}</p>
           </div>
+          <Link
+            href="/settings"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-ink transition-colors hover:bg-app"
+          >
+            <Settings className="h-4 w-4" />
+            Settings
+          </Link>
           <form action={doSignOut}>
             <button
               type="submit"

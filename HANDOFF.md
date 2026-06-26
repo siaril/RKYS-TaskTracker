@@ -162,7 +162,7 @@ Live: https://rekayasa-task-tracker.onrender.com
 (custom domain: https://tasktracker.rekayasa.io — same Render service/DB)
 
 ## 11. Known gaps / TODO (good next tasks)
-- **Notifications — email & WhatsApp** are not built yet (in-app is). See §13.
+- **Notifications — WhatsApp** is not built yet (in-app + email are). See §13.
 - **Real-time bell:** the notification count polls every ~50s; a logged-in user can wait up
   to that long for a new badge. Lower the interval or add SSE/WebSocket for instant updates.
 - **Project delete is a permanent hard delete** (Settings → Delete project) with no
@@ -201,12 +201,17 @@ Five triggers, three channels. Built in phases.
   (new assignee + newly-added description mentions) and `addComment` (mentions + assignee +
   owner). `notify()` excludes the actor and dedups per person. Bell UI with unread badge +
   dropdown + mark-read + ~50s polling.
-- **Phase B — email (TODO, `feat/notifications-email`).** SMTP from the **paid** Render web
-  service (465/587 work on paid; port 25 blocked everywhere). Render has **no mail server** —
-  use an external SMTP provider's creds via `nodemailer`, verify the sending domain
-  (SPF/DKIM). Use the `Notification` rows as an **outbox** + a **Render cron** that sends
-  per-user **digests** (avoid one-email-per-event), with an `emailSentAt` column. Add a
-  `User.emailNotifications` pref + a Notifications settings section.
+- **Phase B — email (DONE, `feat/notifications-email`).** Outbox digest over SMTP via
+  `nodemailer` (`src/lib/email.ts`, provider-agnostic; Gmail app-password today). The
+  `Notification` rows are the outbox: `emailSentAt` column marks sent; `runEmailDigest()`
+  (`src/lib/email-digest.ts`) batches each opted-in user's **unread** notifications (older than
+  a ~2 min grace, so an in-app read beats the email) into one email and stamps them. A
+  **secret-protected** route `POST /api/cron/email-digest?key=$CRON_SECRET` (`?dry=1` to
+  preview) runs it; an external cron pings it every ~5 min (cron-job.org or the committed
+  `.github/workflows/email-digest.yml`). Pref: `User.emailNotifications` toggled at `/settings`.
+  Wording is shared with the bell via `src/lib/notification-text.ts`. Env (see CLAUDE.md):
+  `SMTP_*`, `MAIL_FROM`, `APP_URL`, `CRON_SECRET`. ⚠️ SMTP only leaves Render on a **paid** web
+  service (free blocks 25/465/587).
 - **Phase C — WhatsApp (TODO, `feat/notifications-whatsapp`).** Self-hosted **GOWA**
   (`aldinokemal/go-whatsapp-web-multidevice`, Docker, link a number by QR, POST to its REST
   API). ⚠️ Unofficial → real **account-ban risk**; keep sends behind a `sendWhatsApp()`

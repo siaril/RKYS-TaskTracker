@@ -133,7 +133,14 @@ Add a 0.2.x (or next) release-notes entry in `src/lib/releases.ts` for in-app no
 
 ---
 
-# Phase B — Email (later branch: `feat/notifications-email`)
+# Phase B — Email (DONE, `feat/notifications-email`)
+> Built 2026-06-26. Digest outbox over SMTP (`nodemailer`, Gmail app-password). Core in
+> `src/lib/email.ts` + `src/lib/email-digest.ts`; secret-protected route
+> `POST /api/cron/email-digest?key=$CRON_SECRET` (`?dry=1` to preview), pinged by an external
+> cron every ~5 min (`.github/workflows/email-digest.yml` or cron-job.org). Pref
+> `User.emailNotifications` at `/settings`; `Notification.emailSentAt` is the outbox marker.
+> ⚠️ SMTP only leaves Render on a **paid** web service. Original design (unchanged) below.
+
 - **Prefs:** add `User.emailNotifications Boolean @default(true)` (+ a "Notifications" settings
   section to toggle it).
 - **Outbox pattern:** add `emailSentAt DateTime?` to `Notification`. A **Render Cron Job** (or a

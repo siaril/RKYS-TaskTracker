@@ -25,6 +25,17 @@ Built phase-by-phase (see `plan` notes); verify each phase before moving on.
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — from Google Cloud Console:
   APIs & Services → Credentials → Create OAuth client ID → Web application.
   Authorized redirect URI: `http://localhost:3000/api/auth/callback/google`.
+- **Email notifications (Phase B — optional locally):**
+  - `APP_URL` — absolute base for task links in emails (local: `http://localhost:3000`).
+  - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `MAIL_FROM` — SMTP creds.
+    Gmail: host `smtp.gmail.com`, port `465`, user = your Gmail, pass = a **Google App
+    Password** (Google Account → Security → 2-Step Verification → App passwords; the
+    account password won't work), `MAIL_FROM` = that Gmail address.
+  - `CRON_SECRET` — shared secret the digest cron must present.
+  - Trigger a digest manually: `POST /api/cron/email-digest?key=<CRON_SECRET>` (add `&dry=1`
+    to preview without sending). A free external cron (cron-job.org or the committed
+    `.github/workflows/email-digest.yml`) hits it every ~5 min in prod.
+  - ⚠️ On Render, outbound SMTP only works on a **paid** web service (free blocks SMTP ports).
 
 ## ⚠️ Memory rules (prevent the OOM crash — read every session)
 A past "build everything at once" attempt spawned a runaway Node process that ate all RAM

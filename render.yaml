@@ -36,3 +36,19 @@ services:
         sync: false # set in the Render dashboard
       - key: AUTH_URL
         sync: false # optional; set to https://<your-app>.onrender.com after first deploy
+      # Email notifications (Phase B). NOTE: outbound SMTP only works on a PAID web
+      # service — Render blocks SMTP ports (25/465/587) on free services.
+      - key: APP_URL
+        sync: false # absolute base for task links in emails, e.g. https://<your-app>.onrender.com
+      - key: SMTP_HOST
+        sync: false # e.g. smtp.gmail.com
+      - key: SMTP_PORT
+        sync: false # 465 (implicit TLS) or 587 (STARTTLS)
+      - key: SMTP_USER
+        sync: false # the sending account (Gmail address)
+      - key: SMTP_PASS
+        sync: false # Gmail app password (not the account password)
+      - key: MAIL_FROM
+        sync: false # optional; defaults to SMTP_USER
+      - key: CRON_SECRET
+        sync: false # shared secret the digest cron must present
