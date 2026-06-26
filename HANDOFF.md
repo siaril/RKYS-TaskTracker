@@ -212,6 +212,13 @@ Five triggers, three channels. Built in phases.
   Wording is shared with the bell via `src/lib/notification-text.ts`. Env (see CLAUDE.md):
   `SMTP_*`, `MAIL_FROM`, `APP_URL`, `CRON_SECRET`. ⚠️ SMTP only leaves Render on a **paid** web
   service (free blocks 25/465/587).
+  - **Deliverability:** emails use a named From (`APP_NAME <…>`), a `Reply-To`, and a
+    `List-Unsubscribe` + one-click `List-Unsubscribe-Post` header backed by a signed,
+    login-less unsubscribe endpoint `GET/POST /api/unsubscribe?token=…`
+    (`src/lib/unsubscribe-token.ts`, HMAC over userId with `AUTH_SECRET`; GET shows a confirm
+    page, POST flips `emailNotifications=false`). The **durable** inbox fix is sending from an
+    authenticated `rekayasa.io` mailbox (Workspace DKIM/SPF/DMARC) — env-only (`SMTP_USER`/
+    `MAIL_FROM`), no code change. Sending from a bare `@gmail.com` address tends to spam-folder.
 - **Phase C — WhatsApp (TODO, `feat/notifications-whatsapp`).** Self-hosted **GOWA**
   (`aldinokemal/go-whatsapp-web-multidevice`, Docker, link a number by QR, POST to its REST
   API). ⚠️ Unofficial → real **account-ban risk**; keep sends behind a `sendWhatsApp()`

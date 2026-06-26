@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { APP_NAME } from "@/lib/releases";
 
 // Provider-agnostic SMTP sender. Configured for Gmail (app password) today, but any
 // SMTP provider works by swapping the SMTP_* env vars — no code change.
@@ -41,6 +42,8 @@ export type SendEmailInput = {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 };
 
 /** Send one email. Best-effort: returns { ok } and never throws into the caller.
@@ -51,13 +54,17 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean }>
     console.warn("[email] SMTP not configured (SMTP_HOST/USER/PASS) — skipping send");
     return { ok: false };
   }
+  const address = process.env.MAIL_FROM ?? process.env.SMTP_USER;
   try {
     await transport.sendMail({
-      from: process.env.MAIL_FROM ?? process.env.SMTP_USER,
+      // A named From ("Rekayasa Task Tracker <…>") reads as legitimate, not a raw address.
+      from: address ? { name: APP_NAME, address } : undefined,
       to: input.to,
+      replyTo: input.replyTo,
       subject: input.subject,
       text: input.text,
       html: input.html,
+      headers: input.headers,
     });
     return { ok: true };
   } catch (err) {

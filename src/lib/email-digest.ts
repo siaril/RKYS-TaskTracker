@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendEmail, type SendEmailInput } from "@/lib/email";
 import { notificationMessage } from "@/lib/notification-text";
+import { makeUnsubscribeToken } from "@/lib/unsubscribe-token";
 import { APP_NAME } from "@/lib/releases";
 
 // Outbox digest: one batched email per user covering their new, still-unread
@@ -33,8 +34,10 @@ type DigestItem = {
   actorName: string;
 };
 
-function buildDigestEmail(to: string, items: DigestItem[]): SendEmailInput {
+function buildDigestEmail(userId: string, to: string, items: DigestItem[]): SendEmailInput {
   const base = appUrl();
+  const fromAddr = process.env.MAIL_FROM ?? process.env.SMTP_USER;
+  const unsubUrl = `${base}/api/unsubscribe?token=${makeUnsubscribeToken(userId)}`;
   const n = items.length;
   const subject = `You have ${n} new notification${n === 1 ? "" : "s"}`;
 
@@ -46,7 +49,7 @@ function buildDigestEmail(to: string, items: DigestItem[]): SendEmailInput {
   const text =
     `${subject} in ${APP_NAME}:\n\n` +
     lines.map((l) => `• ${l.text}\n  ${l.link}`).join("\n\n") +
-    `\n\nManage email notifications: ${base}/settings`;
+    `\n\nManage email notifications: ${base}/settings\nUnsubscribe: ${unsubUrl}`;
 
   const htmlItems = lines
     .map(
@@ -61,11 +64,20 @@ function buildDigestEmail(to: string, items: DigestItem[]): SendEmailInput {
   <ul style="padding-left:18px;margin:0 0 24px;font-size:14px">${htmlItems}</ul>
   <p style="font-size:12px;color:#676879;border-top:1px solid #e6e9ef;padding-top:14px;margin:0">
     You're getting this because you have email notifications on.
-    <a href="${esc(base)}/settings" style="color:#0073ea">Manage notifications</a>.
+    <a href="${esc(base)}/settings" style="color:#0073ea">Manage notifications</a> ·
+    <a href="${esc(unsubUrl)}" style="color:#676879">Unsubscribe</a>.
   </p>
 </div>`;
 
-  return { to, subject, html, text };
+  // List-Unsubscribe (+ one-click POST) is a strong "legitimate automated mail" signal.
+  const headers: Record<string, string> = {
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    "List-Unsubscribe": fromAddr
+      ? `<${unsubUrl}>, <mailto:${fromAddr}?subject=Unsubscribe>`
+      : `<${unsubUrl}>`,
+  };
+
+  return { to, subject, html, text, replyTo: fromAddr, headers };
 }
 
 export type PlannedEmail = { to: string; userId: string; count: number; subject: string };
@@ -119,6 +131,7 @@ export async function runEmailDigest(opts?: {
     // Email only when there's unread activity and we have an address for them.
     if (unread.length > 0 && group.email) {
       const mail = buildDigestEmail(
+        userId,
         group.email,
         unread.map((r) => ({
           type: r.type,
