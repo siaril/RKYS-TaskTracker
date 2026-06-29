@@ -23,6 +23,8 @@ export async function setTheme(formData: FormData) {
   (await cookies()).set("theme", theme, {
     path: "/",
     maxAge: 365 * 24 * 60 * 60, // 1 year
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
   });
   revalidatePath("/", "layout");
 }

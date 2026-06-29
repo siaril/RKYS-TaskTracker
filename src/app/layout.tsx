@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Figtree } from "next/font/google";
 import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -18,8 +19,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeCookie = (await cookies()).get("theme")?.value;
-  const isDark = themeCookie === "dark";
+  const session = await auth();
+  const cookieTheme = (await cookies()).get("theme")?.value;
+  const theme = session?.user?.theme ?? cookieTheme ?? "light";
+  const isDark = theme === "dark";
 
   return (
     <html lang="en" className={`${figtree.variable} h-full antialiased${isDark ? " dark" : ""}`}>
