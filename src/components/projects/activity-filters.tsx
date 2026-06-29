@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { ACTIVITY_CATEGORIES } from "@/lib/activity-filters";
+import { TaskFilterCombobox } from "@/components/projects/task-filter-combobox";
 
 // Two dropdowns (user + type) that drive the server query via the URL. Filtering resets
 // to page 1 (we simply don't carry the page param when a filter changes).
@@ -52,19 +53,11 @@ export function ActivityFilters({
           </option>
         ))}
       </select>
-      <select
+      <TaskFilterCombobox
+        tasks={tasks}
         value={selectedTask}
-        onChange={(e) => go({ task: e.target.value })}
-        className={selectClass}
-        aria-label="Filter by task"
-      >
-        <option value="">All tasks</option>
-        {tasks.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.title}
-          </option>
-        ))}
-      </select>
+        onChange={(id) => go({ task: id })}
+      />
       <select
         value={selectedType}
         onChange={(e) => go({ type: e.target.value })}
