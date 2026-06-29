@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-// Click any image inside rendered rich-text (.comment-html — task descriptions and
-// comments) to view it full-size. One delegated listener covers every image on the page,
-// including comments added after load. Backdrop / X / Escape close it.
+// Click any image inside rich-text content to view it full-size: .comment-html (rendered
+// comments and read-only descriptions) and .comment-editor (the description edit form,
+// which is how creators/editors see a task). One delegated listener covers every image on
+// the page, including comments added after load. Backdrop / X / Escape close it.
 export function ImageLightbox() {
   const [src, setSrc] = useState<string | null>(null);
   const [alt, setAlt] = useState("");
@@ -13,7 +14,7 @@ export function ImageLightbox() {
   useEffect(() => {
     function onClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
-      if (target.tagName !== "IMG" || !target.closest(".comment-html")) return;
+      if (target.tagName !== "IMG" || !target.closest(".comment-html, .comment-editor")) return;
       const img = target as HTMLImageElement;
       e.preventDefault();
       setSrc(img.currentSrc || img.src);
