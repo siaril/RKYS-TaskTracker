@@ -29,6 +29,7 @@ export const RELEASES: Release[] = [
       "Notifications by email too: get a periodic digest of your new notifications, with a link straight to the task. Turn it off anytime in Settings.",
       "The board now works on your phone: each status is its own tab, and you move a task with a quick \"Move\" button instead of fiddly dragging.",
       "New Project Activity tab: see everything happening in a project — who created, moved, assigned, commented on, or deleted a task — filterable by user, task (searchable), and activity type.",
+      "Dark mode: flip the sun/moon switch in the top bar. Your choice is saved to your account and follows you to any device.",
       "See the app version in the sidebar, plus a \"What's new\" popup whenever we ship an update.",
     ],
   },
