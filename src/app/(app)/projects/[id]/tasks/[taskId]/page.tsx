@@ -16,6 +16,7 @@ import { updateTask, deleteTask, restoreTask, assignToMe } from "@/lib/actions/t
 import { deleteTaskAttachment } from "@/lib/actions/attachments";
 import { FlashToast } from "@/components/flash-toast";
 import { CopyLinkButton } from "@/components/copy-link-button";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { formatDueDate, toDateInputValue } from "@/lib/format";
 
 function formatBytes(n: number): string {
@@ -301,6 +302,9 @@ export default async function TaskDetailPage({
           </div>
         </section>
       </div>
+
+      {/* Click images in the description/comments to view them full-size. */}
+      <ImageLightbox />
     </div>
   );
 }
