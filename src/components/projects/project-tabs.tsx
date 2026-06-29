@@ -7,10 +7,13 @@ import { cn } from "@/lib/utils";
 export function ProjectTabs({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const base = `/projects/${projectId}`;
+  const onActivity = pathname.startsWith(`${base}/activity`);
   const onSettings = pathname.startsWith(`${base}/settings`);
 
   const tabs = [
-    { label: "Project Tasks", href: base, active: !onSettings },
+    // Tasks owns the board (base) and the task pages; Activity/Settings own their subtrees.
+    { label: "Project Tasks", href: base, active: !onActivity && !onSettings },
+    { label: "Project Activity", href: `${base}/activity`, active: onActivity },
     { label: "Project Settings", href: `${base}/settings`, active: onSettings },
   ];
 
