@@ -88,7 +88,7 @@ export function TaskForm({
           <select
             name="statusId"
             defaultValue={defaults?.statusId ?? statuses[0]?.id ?? ""}
-            className={`${inputCls} bg-white`}
+            className={inputCls}
           >
             {statuses.map((s) => (
               <option key={s.id} value={s.id}>
@@ -103,7 +103,7 @@ export function TaskForm({
           <select
             name="priority"
             defaultValue={defaults?.priority ?? "MEDIUM"}
-            className={`${inputCls} bg-white`}
+            className={inputCls}
           >
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>
@@ -117,7 +117,7 @@ export function TaskForm({
           <select
             name="assigneeId"
             defaultValue={defaults?.assigneeId ?? ""}
-            className={`${inputCls} bg-white`}
+            className={inputCls}
           >
             <option value="">Unassigned</option>
             {members.map((m) => (
@@ -134,7 +134,7 @@ export function TaskForm({
             type="date"
             name="dueDate"
             defaultValue={defaults?.dueDate ?? ""}
-            className={`${inputCls} bg-white`}
+            className={inputCls}
           />
         </div>
       </div>

@@ -37,7 +37,7 @@ export function ProductCreateForm() {
           name="color"
           defaultValue="#0073ea"
           aria-label="Product color"
-          className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-white p-1"
+          className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-surface p-1"
         />
         <button
           type="submit"

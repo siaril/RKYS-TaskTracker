@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Figtree } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -12,13 +13,16 @@ export const metadata: Metadata = {
   description: "Kanban task tracker for teams",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeCookie = (await cookies()).get("theme")?.value;
+  const isDark = themeCookie === "dark";
+
   return (
-    <html lang="en" className={`${figtree.variable} h-full antialiased`}>
+    <html lang="en" className={`${figtree.variable} h-full antialiased${isDark ? " dark" : ""}`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

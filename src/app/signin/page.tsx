@@ -26,7 +26,7 @@ export default async function SignInPage({
       />
       <div className="absolute inset-0 bg-black/30" />
 
-      <div className="relative w-full max-w-sm rounded-2xl border border-white/20 bg-white/95 p-8 shadow-2xl backdrop-blur">
+      <div className="relative w-full max-w-sm rounded-2xl border border-white/20 bg-surface/95 p-8 shadow-2xl backdrop-blur">
         <div className="mb-6 flex flex-col items-center text-center">
           <Image
             src="/rekayasa-logo.png"
@@ -52,7 +52,7 @@ export default async function SignInPage({
         <form action={googleSignIn}>
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border-strong bg-white px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-app"
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-border-strong bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-app"
           >
             <GoogleIcon />
             Continue with Google

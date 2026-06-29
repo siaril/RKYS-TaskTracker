@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/sidebar";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserMenu } from "@/components/user-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { WhatsNew } from "@/components/whats-new";
 import { NotificationBell } from "@/components/notification-bell";
 import { requireUser } from "@/lib/session";
@@ -23,6 +24,7 @@ export default async function AppLayout({
             <span className="text-sm font-semibold text-muted">Workspace</span>
           </div>
           <div className="flex items-center gap-1">
+            <ThemeToggle initial={user.theme} />
             <NotificationBell />
             <UserMenu
               name={user.name ?? "User"}

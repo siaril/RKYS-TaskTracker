@@ -171,7 +171,7 @@ export default async function ProjectSettingsPage({
                   name="userId"
                   required
                   defaultValue=""
-                  className="h-10 flex-1 rounded-lg border border-border-strong bg-white px-3 text-sm outline-none focus:border-primary"
+                  className="h-10 flex-1 rounded-lg border border-border-strong bg-surface px-3 text-sm outline-none focus:border-primary"
                 >
                   <option value="" disabled>
                     Add a person…
@@ -185,7 +185,7 @@ export default async function ProjectSettingsPage({
                 <select
                   name="role"
                   defaultValue="EDITOR"
-                  className="h-10 rounded-lg border border-border-strong bg-white px-3 text-sm outline-none focus:border-primary"
+                  className="h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm outline-none focus:border-primary"
                 >
                   <option value="OWNER">Owner</option>
                   <option value="EDITOR">Editor</option>
@@ -237,7 +237,7 @@ export default async function ProjectSettingsPage({
                     name="color"
                     defaultValue={s.color}
                     aria-label="Status color"
-                    className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-white p-1"
+                    className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-surface p-1"
                   />
                   <input
                     name="name"
@@ -317,7 +317,7 @@ export default async function ProjectSettingsPage({
               name="color"
               defaultValue="#c4c4c4"
               aria-label="New status color"
-              className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-white p-1"
+              className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-surface p-1"
             />
             <input
               name="name"

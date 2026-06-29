@@ -77,7 +77,7 @@ export default async function ProductsPage({
                     name="color"
                     defaultValue={product.color}
                     aria-label="Product color"
-                    className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-white p-1"
+                    className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border-strong bg-surface p-1"
                   />
                   <div className="flex gap-2">
                     <button

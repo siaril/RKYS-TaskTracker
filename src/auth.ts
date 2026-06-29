@@ -26,11 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       });
       return Boolean(allowed && !allowed.disabled);
     },
-    // Surface the user id + role on the session for use across the app.
+    // Surface the user id + role + theme on the session for use across the app.
     session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
         session.user.role = (user as { role?: "ADMIN" | "MEMBER" }).role ?? "MEMBER";
+        session.user.theme = ((user as { theme?: string | null }).theme ?? "light") as "light" | "dark";
       }
       return session;
     },

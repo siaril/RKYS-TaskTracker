@@ -18,7 +18,7 @@ export function MemberRoleSelect({
       defaultValue={defaultValue}
       disabled={disabled}
       onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      className="h-8 rounded-lg border border-border-strong bg-white px-2 text-xs font-medium text-ink outline-none focus:border-primary disabled:opacity-60"
+      className="h-8 rounded-lg border border-border-strong bg-surface px-2 text-xs font-medium text-ink outline-none focus:border-primary disabled:opacity-60"
     >
       {ROLES.map((r) => (
         <option key={r} value={r}>

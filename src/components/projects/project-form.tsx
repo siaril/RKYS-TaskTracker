@@ -48,7 +48,7 @@ export function ProjectForm({ action, clients, products, defaults, submitLabel, 
           name="clientId"
           required
           defaultValue={defaults?.clientId ?? ""}
-          className="h-10 w-full rounded-lg border border-border-strong bg-white px-3 text-sm outline-none focus:border-primary"
+          className="h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm outline-none focus:border-primary"
         >
           <option value="" disabled>
             Choose a client…

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* monday.com-inspired design tokens (light theme). */
 @theme {
   --color-app: #f6f7fb; /* app background */
@@ -30,6 +33,25 @@ body {
   background: var(--color-app);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* --- Dark theme ------------------------------------------------------------------ */
+.dark {
+  --color-app: #101113;
+  --color-surface: #1c1d21;
+  --color-ink: #e4e4e7;
+  --color-muted: #a1a1aa;
+  --color-border: #33353a;
+  --color-border-strong: #43454a;
+
+  --color-primary: #4c9aff;
+  --color-primary-hover: #66aeff;
+  --color-accent: #8888ff;
+
+  --color-positive: #00c875;
+  --color-working: #fdab3d;
+  --color-negative: #e2445c;
+  --color-neutral: #6b7280;
 }
 
 /* Rich-text comments (editor + rendered output) */
