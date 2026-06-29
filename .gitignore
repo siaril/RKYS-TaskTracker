@@ -45,6 +45,9 @@ next-env.d.ts
 # local Claude Code settings
 /.claude/
 
+# Pi agent settings
+/.pi/
+
 # uploaded files (local dev)
 /public/uploads/*
 !/public/uploads/.gitkeep
