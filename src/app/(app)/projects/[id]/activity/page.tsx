@@ -20,7 +20,7 @@ export default async function ProjectActivityPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ user?: string; type?: string; page?: string }>;
+  searchParams: Promise<{ user?: string; task?: string; type?: string; page?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -32,19 +32,30 @@ export default async function ProjectActivityPage({
 
   const page = Math.max(1, Number(sp.page) || 1);
   const userId = sp.user || undefined;
+  const taskId = sp.task || undefined;
   const typeKey = sp.type || "all";
 
-  const members = await prisma.projectMember.findMany({
-    where: { projectId: id },
-    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-    select: { user: { select: { id: true, name: true, email: true } } },
-  });
+  // Tasks visible to this viewer drive the task dropdown (non-owners can't pick a deleted task).
+  const taskScope = isOwner ? {} : { status: { kind: "NORMAL" as const } };
+  const [members, tasks] = await Promise.all([
+    prisma.projectMember.findMany({
+      where: { projectId: id },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+      select: { user: { select: { id: true, name: true, email: true } } },
+    }),
+    prisma.task.findMany({
+      where: { projectId: id, ...taskScope },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true },
+    }),
+  ]);
 
   // Non-owners don't see activity for tasks currently in a Deleted column (mirrors the
   // board hiding deleted tasks from non-owners); owners/admins see everything.
   const where: Prisma.TaskActivityWhereInput = {
-    task: { projectId: id, ...(isOwner ? {} : { status: { kind: "NORMAL" } }) },
+    task: { projectId: id, ...taskScope },
     ...(userId ? { userId } : {}),
+    ...(taskId ? { taskId } : {}),
     ...activityTypeWhere(typeKey),
   };
 
@@ -65,6 +76,7 @@ export default async function ProjectActivityPage({
   const href = (p: number) => {
     const q = new URLSearchParams();
     if (userId) q.set("user", userId);
+    if (taskId) q.set("task", taskId);
     if (typeKey !== "all") q.set("type", typeKey);
     if (p > 1) q.set("page", String(p));
     const qs = q.toString();
@@ -78,7 +90,9 @@ export default async function ProjectActivityPage({
           id: m.user.id,
           name: m.user.name ?? m.user.email ?? "User",
         }))}
+        tasks={tasks}
         selectedUser={userId ?? ""}
+        selectedTask={taskId ?? ""}
         selectedType={typeKey}
       />
 

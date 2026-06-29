@@ -7,21 +7,27 @@ import { ACTIVITY_CATEGORIES } from "@/lib/activity-filters";
 // to page 1 (we simply don't carry the page param when a filter changes).
 export function ActivityFilters({
   members,
+  tasks,
   selectedUser,
+  selectedTask,
   selectedType,
 }: {
   members: { id: string; name: string }[];
+  tasks: { id: string; title: string }[];
   selectedUser: string;
+  selectedTask: string;
   selectedType: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  function go(next: { user?: string; type?: string }) {
+  function go(next: { user?: string; task?: string; type?: string }) {
     const userVal = next.user ?? selectedUser;
+    const taskVal = next.task ?? selectedTask;
     const typeVal = next.type ?? selectedType;
     const p = new URLSearchParams();
     if (userVal) p.set("user", userVal);
+    if (taskVal) p.set("task", taskVal);
     if (typeVal && typeVal !== "all") p.set("type", typeVal);
     const qs = p.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -43,6 +49,19 @@ export function ActivityFilters({
         {members.map((m) => (
           <option key={m.id} value={m.id}>
             {m.name}
+          </option>
+        ))}
+      </select>
+      <select
+        value={selectedTask}
+        onChange={(e) => go({ task: e.target.value })}
+        className={selectClass}
+        aria-label="Filter by task"
+      >
+        <option value="">All tasks</option>
+        {tasks.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.title}
           </option>
         ))}
       </select>
