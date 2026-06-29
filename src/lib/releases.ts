@@ -28,6 +28,7 @@ export const RELEASES: Release[] = [
       "Get notified: a bell in the top-right tells you when you're assigned a task, @mentioned, or someone comments on a task you're assigned to or created.",
       "Notifications by email too: get a periodic digest of your new notifications, with a link straight to the task. Turn it off anytime in Settings.",
       "The board now works on your phone: each status is its own tab, and you move a task with a quick \"Move\" button instead of fiddly dragging.",
+      "New Project Activity tab: see everything happening in a project — who created, moved, assigned, commented on, or deleted a task — filterable by user, task (searchable), and activity type.",
       "See the app version in the sidebar, plus a \"What's new\" popup whenever we ship an update.",
     ],
   },
