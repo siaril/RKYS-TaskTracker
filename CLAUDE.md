@@ -36,6 +36,17 @@ Built phase-by-phase (see `plan` notes); verify each phase before moving on.
     to preview without sending). A free external cron (cron-job.org or the committed
     `.github/workflows/email-digest.yml`) hits it every ~5 min in prod.
   - ⚠️ On Render, outbound SMTP only works on a **paid** web service (free blocks SMTP ports).
+- **WhatsApp notifications (Phase C — via Kapso / official Cloud API):**
+  - `KAPSO_API_KEY` — Kapso project API key (Kapso dashboard → Settings → API Keys).
+  - `KAPSO_PHONE_NUMBER_ID` — the connected number's ID (WhatsApp → Phone numbers → detail).
+  - `WHATSAPP_TEMPLATE_NAME` — the approved Utility template's name.
+  - `WHATSAPP_TEMPLATE_LANG` — template language code; **defaults to `en_US`**. Set it only if
+    your template uses another language.
+  - Sends go out on the **same cron** as the email digest (`POST /api/cron/email-digest`) — the
+    tick runs email + WhatsApp together. WhatsApp is per-notification (one template message per
+    unread notification), for users with `whatsappNotifications` on + a `phone` set.
+  - Bulk-load phone numbers by user id: `npm run db:import-phones -- <phones.csv>` (see
+    `prisma/import-phones.ts`).
 
 ## ⚠️ Memory rules (prevent the OOM crash — read every session)
 A past "build everything at once" attempt spawned a runaway Node process that ate all RAM

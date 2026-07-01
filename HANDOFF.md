@@ -219,7 +219,16 @@ Five triggers, three channels. Built in phases.
     page, POST flips `emailNotifications=false`). The **durable** inbox fix is sending from an
     authenticated `rekayasa.io` mailbox (Workspace DKIM/SPF/DMARC) — env-only (`SMTP_USER`/
     `MAIL_FROM`), no code change. Sending from a bare `@gmail.com` address tends to spam-folder.
-- **Phase C — WhatsApp (TODO, `feat/notifications-whatsapp`).** Use **Kapso** (`kapso.com`),
+- **Phase C — WhatsApp (BUILT, `feat/notifications-whatsapp`).** `src/lib/whatsapp.ts`
+  `sendWhatsApp(phone, params)` POSTs a template message to Kapso
+  (`POST api.kapso.ai/meta/whatsapp/v24.0/{KAPSO_PHONE_NUMBER_ID}/messages`, `X-API-Key`),
+  positional params fill `{{1}}`/`{{2}}`. `src/lib/whatsapp-dispatch.ts` `runWhatsAppDispatch()`
+  sends one message per unread, opted-in notification (grace + `Notification.whatsappSentAt`
+  outbox marker), called from the **same cron route** as the email digest. Prefs `User.phone` +
+  `User.whatsappNotifications` set at `/settings`; bulk-load via `npm run db:import-phones`. Env:
+  `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG`
+  (default en_US). ⚠️ Needs a **Meta-approved Utility template** to actually send (business-
+  initiated). Original design detail below. — Use **Kapso** (`kapso.com`),
   which runs on Meta's **official WhatsApp Business Cloud API** → **no ban risk** (decision
   revised 2026-06-30, away from the self-hosted GOWA gateway). POST to Kapso's REST API
   (`@kapso/whatsapp-cloud-api`); business-initiated notifications must use a **Meta-approved

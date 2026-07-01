@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { runEmailDigest } from "@/lib/email-digest";
+import { runWhatsAppDispatch } from "@/lib/whatsapp-dispatch";
 
 // Scheduled endpoint: an external cron (cron-job.org / GitHub Action) pings this every
 // few minutes to flush the notification email outbox. Protected by a shared secret, NOT
@@ -26,11 +27,15 @@ async function handle(req: Request): Promise<Response> {
   }
   const dryRun = new URL(req.url).searchParams.has("dry");
   try {
-    const result = await runEmailDigest({ dryRun });
-    return Response.json({ ok: true, dryRun, ...result });
+    // One tick drives both notification channels: email digest + WhatsApp dispatch.
+    const [email, whatsapp] = await Promise.all([
+      runEmailDigest({ dryRun }),
+      runWhatsAppDispatch({ dryRun }),
+    ]);
+    return Response.json({ ok: true, dryRun, email, whatsapp });
   } catch (err) {
     console.error("[cron/email-digest] failed:", err);
-    return Response.json({ ok: false, error: "Digest failed" }, { status: 500 });
+    return Response.json({ ok: false, error: "Dispatch failed" }, { status: 500 });
   }
 }
 

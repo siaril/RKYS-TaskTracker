@@ -156,7 +156,16 @@ Add a 0.2.x (or next) release-notes entry in `src/lib/releases.ts` for in-app no
   (465/587 open; port 25 blocked).
 - Simple HTML template; link straight to the task.
 
-# Phase C — WhatsApp via Kapso / official Cloud API (later branch: `feat/notifications-whatsapp`)
+# Phase C — WhatsApp via Kapso / official Cloud API (BUILT, `feat/notifications-whatsapp`)
+> Built 2026-07-01. `src/lib/whatsapp.ts` (`sendWhatsApp` → Kapso Cloud-API proxy) +
+> `src/lib/whatsapp-dispatch.ts` (`runWhatsAppDispatch`, per-notification, `whatsappSentAt`
+> outbox marker) wired into the existing `POST /api/cron/email-digest` tick. Prefs
+> `User.phone` / `User.whatsappNotifications` at `/settings`; bulk import `npm run
+> db:import-phones -- <csv>`. Env: `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`,
+> `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` (default en_US). ⚠️ Live sends need the
+> **Meta-approved Utility template**. Verified: tsc + eslint + dry-run dispatch smoke. Original
+> design below.
+
 
 Reuses the same **outbox** the email digest already established (`Notification` + a
 `*SentAt` marker + the cron route) — WhatsApp is just a second dispatch channel, not a new

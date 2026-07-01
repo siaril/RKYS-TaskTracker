@@ -52,3 +52,12 @@ services:
         sync: false # optional; defaults to SMTP_USER
       - key: CRON_SECRET
         sync: false # shared secret the digest cron must present
+      # WhatsApp notifications (Phase C) — Kapso / official WhatsApp Cloud API.
+      - key: KAPSO_API_KEY
+        sync: false # Kapso project API key
+      - key: KAPSO_PHONE_NUMBER_ID
+        sync: false # connected number's ID
+      - key: WHATSAPP_TEMPLATE_NAME
+        sync: false # approved Utility template name
+      - key: WHATSAPP_TEMPLATE_LANG
+        sync: false # optional; template language code, defaults to en_US

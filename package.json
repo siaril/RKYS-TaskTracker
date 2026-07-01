@@ -15,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:add-user": "tsx prisma/add-user.ts",
+    "db:import-phones": "tsx prisma/import-phones.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

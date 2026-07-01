@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { EmailNotificationsToggle } from "@/components/email-notifications-toggle";
+import { WhatsAppSettings } from "@/components/whatsapp-settings";
 
 export default async function SettingsPage() {
   const sessionUser = await requireUser();
   const user = await prisma.user.findUnique({
     where: { id: sessionUser.id },
-    select: { emailNotifications: true },
+    select: { emailNotifications: true, phone: true, whatsappNotifications: true },
   });
 
   return (
@@ -26,6 +27,13 @@ export default async function SettingsPage() {
           </div>
           <EmailNotificationsToggle initial={user?.emailNotifications ?? true} />
         </div>
+
+        <div className="my-5 border-t border-border" />
+
+        <WhatsAppSettings
+          initialPhone={user?.phone ?? ""}
+          initialEnabled={user?.whatsappNotifications ?? false}
+        />
       </section>
     </div>
   );
