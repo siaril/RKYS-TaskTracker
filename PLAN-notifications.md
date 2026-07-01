@@ -35,10 +35,12 @@ follow-up branches.
   port 25 is blocked everywhere). NOTE: Render does **not** provide a mail server — "SMTP on
   Render" still means an **external SMTP provider** (e.g. SendGrid/Mailgun/SES/Resend SMTP
   creds), just reached over SMTP from the Render service.
-- **WhatsApp (Phase C):** self-hosted **GOWA** (`aldinokemal/go-whatsapp-web-multidevice`) —
-  lightweight Go gateway, link a number via QR, POST to its REST API. Unofficial → real
-  **account-ban risk**; keep all sends behind a `sendWhatsApp()` abstraction so we can swap
-  to the official WhatsApp Business Cloud API later.
+- **WhatsApp (Phase C):** use **Kapso** (`kapso.com`), which runs on Meta's **official
+  WhatsApp Business Cloud API** — POST to its REST API to send. Chosen over the self-hosted
+  GOUA/GOWA gateway (**revised 2026-06-30**) because the official API has **no account-ban
+  risk**, whereas unofficial WhatsApp-Web automation does. Trade-off: official onboarding
+  (WABA + dedicated business number + Meta-approved message templates + recipient opt-in).
+  Still keep all sends behind a `sendWhatsApp()` abstraction so the provider can be swapped.
 
 ---
 
@@ -154,22 +156,68 @@ Add a 0.2.x (or next) release-notes entry in `src/lib/releases.ts` for in-app no
   (465/587 open; port 25 blocked).
 - Simple HTML template; link straight to the task.
 
-# Phase C — WhatsApp (later branch: `feat/notifications-whatsapp`)
-- **Gateway:** stand up **GOWA** (Docker) — a separate Render Docker service or a small VPS (a
-  VPS is often simpler for the one-time QR link + persistent session storage). Link a dedicated
-  WhatsApp number; persist the session on a disk/volume.
-- **Prefs/contact:** `User.phone String?` + `User.whatsappNotifications Boolean @default(false)`
-  + phone entry in the Notifications settings section (opt-in).
-- **Sending:** `src/lib/whatsapp.ts` → `sendWhatsApp(phone, text)` POSTs to GOWA `/send/message`.
-  Env: `GOWA_URL`, `GOWA_BASIC_AUTH`. The outbox worker (from Phase B) also dispatches WhatsApp
-  for opted-in users (add `whatsappSentAt`).
-- ⚠️ **Ban risk** (unofficial WhatsApp Web automation): keep volume low, only opted-in internal
-  users, behind the `sendWhatsApp()` abstraction so swapping to the official **WhatsApp Business
-  Cloud API** later is a one-file change.
+# Phase C — WhatsApp via Kapso / official Cloud API (later branch: `feat/notifications-whatsapp`)
+
+Reuses the same **outbox** the email digest already established (`Notification` + a
+`*SentAt` marker + the cron route) — WhatsApp is just a second dispatch channel, not a new
+pipeline.
+
+## Provider: Kapso (official WhatsApp Business Cloud API)
+- **Why:** built on Meta's official Cloud API → **no account-ban risk** (unlike GOWA's
+  unofficial WhatsApp-Web automation). Provides a REST API, templates, and webhooks; publishes
+  an `@kapso/whatsapp-cloud-api` npm client. Meta bills per-message fees **directly to your
+  WABA** (Kapso doesn't mark them up).
+- **Cost (checked 2026-06-30):** Kapso **Free** = 2,000 msgs/mo, 1 number (likely enough for
+  our internal volume; **~$0**). **Pro ~$25/mo** = 100k msgs if we outgrow it. Plus Meta's
+  small per-message **utility** fee (varies by country; Indonesia is on the low end).
+
+## One-time onboarding (Aril — this is the real work, not the code)
+1. Create a **Meta WhatsApp Business Account (WABA)** and add a **dedicated business phone
+   number** (cannot reuse a personal WhatsApp number).
+2. Connect that number to Kapso (managed or customer-owned WABA).
+3. Submit a **message template** for approval (business-initiated notifications outside the
+   24-hour window must use an approved template), e.g.
+   `🔔 {{1}} {{2}} — open: {{3}}` → "Maya assigned you a task — open: <link>". Category:
+   **Utility**.
+4. Collect each teammate's **phone number** and **opt-in**.
+
+## Schema (additive migration `add_whatsapp_prefs`)
+- `User.phone String?` — E.164, e.g. `+62…`.
+- `User.whatsappNotifications Boolean @default(false)` — opt-in (default OFF; requires a phone).
+- `Notification.whatsappSentAt DateTime?` — second outbox marker, mirroring `emailSentAt`.
+
+## Sending
+- **`src/lib/whatsapp.ts`** → `sendWhatsApp(phone, templateName, params[])` POSTs to Kapso's
+  REST API (send-template endpoint) using `@kapso/whatsapp-cloud-api` or plain `fetch`.
+  Best-effort, same shape as `src/lib/email.ts` (returns `{ ok }`, never throws into callers,
+  no-ops when unconfigured). Env: `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`,
+  `WHATSAPP_TEMPLATE_NAME`.
+- **Dispatch:** extend the digest worker (`src/lib/email-digest.ts` → generalize, or a sibling
+  `whatsapp-digest.ts`) so the cron run also sends to users where `whatsappNotifications` is on,
+  `phone` is set, `whatsappSentAt IS NULL`, and (as with email) still-unread. Stamp
+  `whatsappSentAt`. Keep it a **per-notification** ping or a short digest — template messages
+  cost per send, so batching matters. Same `notificationMessage()` wording via
+  `src/lib/notification-text.ts`.
+- **Settings UI:** add a phone field + WhatsApp toggle to `/settings` (next to the email toggle),
+  gated so the toggle can't be enabled without a valid phone.
+
+## Notes / guardrails
+- Keep sends behind `sendWhatsApp()` so a provider swap (or moving to a different BSP) is a
+  one-file change.
+- Business-initiated messages **require** an approved template; free-form text only works inside
+  a 24-hour user-initiated window (not our case), so notifications = templates.
+- Respect opt-in + provide a way to turn it off (the `/settings` toggle) — WhatsApp policy and
+  basic courtesy.
 
 ## Research notes / sources
 - Render SMTP: free web services block outbound SMTP (25/465/587) since 2025-09-26; **paid**
   unblocks 465/587; port 25 blocked for all. Render provides no mail server →
   [Render changelog](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports).
-- GOWA — [github.com/aldinokemal/go-whatsapp-web-multidevice](https://github.com/aldinokemal/go-whatsapp-web-multidevice).
-- WAHA (alternative) — [waha.devlike.pro](https://waha.devlike.pro/).
+- Kapso (chosen for Phase C, official Cloud API) — [kapso.com](https://kapso.com/),
+  [pricing](https://kapso.com/pricing), [pricing FAQ](https://docs.kapso.ai/docs/whatsapp/pricing-faq),
+  [@kapso/whatsapp-cloud-api](https://www.npmjs.com/package/@kapso/whatsapp-cloud-api).
+- Meta WhatsApp solution providers / Cloud API —
+  [developers.facebook.com](https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/overview).
+- GOWA (rejected — unofficial, ban risk; kept as a fallback reference) —
+  [github.com/aldinokemal/go-whatsapp-web-multidevice](https://github.com/aldinokemal/go-whatsapp-web-multidevice);
+  WAHA alternative — [waha.devlike.pro](https://waha.devlike.pro/).

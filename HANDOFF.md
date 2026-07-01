@@ -219,8 +219,13 @@ Five triggers, three channels. Built in phases.
     page, POST flips `emailNotifications=false`). The **durable** inbox fix is sending from an
     authenticated `rekayasa.io` mailbox (Workspace DKIM/SPF/DMARC) — env-only (`SMTP_USER`/
     `MAIL_FROM`), no code change. Sending from a bare `@gmail.com` address tends to spam-folder.
-- **Phase C — WhatsApp (TODO, `feat/notifications-whatsapp`).** Self-hosted **GOWA**
-  (`aldinokemal/go-whatsapp-web-multidevice`, Docker, link a number by QR, POST to its REST
-  API). ⚠️ Unofficial → real **account-ban risk**; keep sends behind a `sendWhatsApp()`
-  abstraction so swapping to the official WhatsApp Business Cloud API later is a one-file
-  change. Add `User.phone` + `whatsappNotifications` pref; the outbox worker also dispatches WA.
+- **Phase C — WhatsApp (TODO, `feat/notifications-whatsapp`).** Use **Kapso** (`kapso.com`),
+  which runs on Meta's **official WhatsApp Business Cloud API** → **no ban risk** (decision
+  revised 2026-06-30, away from the self-hosted GOWA gateway). POST to Kapso's REST API
+  (`@kapso/whatsapp-cloud-api`); business-initiated notifications must use a **Meta-approved
+  template**. Add `User.phone` + `User.whatsappNotifications` prefs + `Notification.whatsappSentAt`,
+  and have the existing outbox/digest worker dispatch WA for opted-in users behind a
+  `src/lib/whatsapp.ts` `sendWhatsApp()` abstraction. Onboarding (Aril): a Meta WABA + dedicated
+  business number + template approval + collect teammates' phone numbers/opt-in. Cost: Kapso Free
+  (~2k msgs/mo) likely covers us + Meta's small per-message utility fee. See `PLAN-notifications.md`
+  §"Phase C" for the full checklist.
