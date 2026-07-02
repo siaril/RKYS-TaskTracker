@@ -22,9 +22,20 @@ const prisma = new PrismaClient({
 
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
-  if (lines.length < 2) return [];
-  const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
-  return lines.slice(1).map((line) => {
+  // Find the real header row — the first line that has both `id` and `phone` columns.
+  // (Excel table exports can prepend a generic "Column1,Column2,…" row above it.)
+  let header: string[] = [];
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split(",").map((c) => c.trim().toLowerCase());
+    if (cols.includes("id") && cols.includes("phone")) {
+      header = cols;
+      start = i + 1;
+      break;
+    }
+  }
+  if (start === -1) return [];
+  return lines.slice(start).map((line) => {
     const cells = line.split(",");
     const row: Record<string, string> = {};
     header.forEach((h, i) => (row[h] = (cells[i] ?? "").trim()));
@@ -34,11 +45,12 @@ function parseCsv(text: string): Record<string, string>[] {
 
 async function main() {
   const path = process.argv[2];
-  if (!path) throw new Error("Usage: npm run db:import-phones -- path/to/phones.csv");
+  const dry = process.argv.includes("--dry");
+  if (!path) throw new Error("Usage: npm run db:import-phones -- path/to/phones.csv [--dry]");
 
   const rows = parseCsv(readFileSync(path, "utf8"));
-  if (!rows.length || !("id" in rows[0]) || !("phone" in rows[0])) {
-    throw new Error("CSV needs a header row with `id` and `phone` columns.");
+  if (!rows.length) {
+    throw new Error("CSV needs a header row containing `id` and `phone` columns.");
   }
 
   let updated = 0;
@@ -53,6 +65,17 @@ async function main() {
       skippedNoPhone++;
       continue;
     }
+    if (dry) {
+      // Preview only: check the user exists, don't write.
+      const exists = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+      if (exists) {
+        updated++;
+        console.log(`  would set ${id} → ${phone}`);
+      } else {
+        notFound++;
+      }
+      continue;
+    }
     try {
       await prisma.user.update({
         where: { id },
@@ -65,7 +88,8 @@ async function main() {
   }
 
   console.log(
-    `Done. Updated ${updated} user(s) (phone + WhatsApp ON). ` +
+    `${dry ? "[DRY RUN] " : ""}Done. ${dry ? "Would update" : "Updated"} ${updated} user(s)` +
+      `${dry ? "" : " (phone + WhatsApp ON)"}. ` +
       `Skipped ${skippedNoPhone} without a phone; ${notFound} id(s) not found in this DB.`,
   );
 }
