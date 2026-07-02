@@ -54,7 +54,7 @@ prisma/{seed,team-users,add-user}.ts      Seeding + allowlist scripts.
 scripts/{dev,predev,dev-cache}.mjs   Memory-safe dev supervisor + corrupt-.next auto-clean (§8).
 scripts/release-notes.ts   Prints the latest release as a WhatsApp announcement.
 docs/ACCESS.md             Role/permission reference.
-PLAN-notifications.md      Notifications plan (in-app shipped; email/WhatsApp pending).
+prisma/import-phones.ts    Bulk-load WhatsApp phones by user id from CSV (npm run db:import-phones).
 render.yaml, DEPLOY.md     Deployment.
 ```
 
@@ -195,8 +195,8 @@ Live: https://rekayasa-task-tracker.onrender.com
   (the build-worker "fork bomb" was a corrupt-cache symptom). See `scripts/dev-cache.mjs`.
 - **`docs/ACCESS.md`** documents the full role/permission model.
 
-## 13. Notifications roadmap (see `PLAN-notifications.md` for detail)
-Five triggers, three channels. Built in phases.
+## 13. Notifications (five triggers, three channels — all shipped)
+Built in phases; all live as of v0.3.0.
 - **Phase A — in-app (DONE).** `Notification` model; triggers in `createTask`/`updateTask`
   (new assignee + newly-added description mentions) and `addComment` (mentions + assignee +
   owner). `notify()` excludes the actor and dedups per person. Bell UI with unread badge +
@@ -219,22 +219,17 @@ Five triggers, three channels. Built in phases.
     page, POST flips `emailNotifications=false`). The **durable** inbox fix is sending from an
     authenticated `rekayasa.io` mailbox (Workspace DKIM/SPF/DMARC) — env-only (`SMTP_USER`/
     `MAIL_FROM`), no code change. Sending from a bare `@gmail.com` address tends to spam-folder.
-- **Phase C — WhatsApp (BUILT, `feat/notifications-whatsapp`).** `src/lib/whatsapp.ts`
-  `sendWhatsApp(phone, params)` POSTs a template message to Kapso
-  (`POST api.kapso.ai/meta/whatsapp/v24.0/{KAPSO_PHONE_NUMBER_ID}/messages`, `X-API-Key`),
-  positional params fill `{{1}}`/`{{2}}`. `src/lib/whatsapp-dispatch.ts` `runWhatsAppDispatch()`
-  sends one message per unread, opted-in notification (grace + `Notification.whatsappSentAt`
-  outbox marker), called from the **same cron route** as the email digest. Prefs `User.phone` +
-  `User.whatsappNotifications` set at `/settings`; bulk-load via `npm run db:import-phones`. Env:
-  `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG`
-  (default en_US). ⚠️ Needs a **Meta-approved Utility template** to actually send (business-
-  initiated). Original design detail below. — Use **Kapso** (`kapso.com`),
-  which runs on Meta's **official WhatsApp Business Cloud API** → **no ban risk** (decision
-  revised 2026-06-30, away from the self-hosted GOWA gateway). POST to Kapso's REST API
-  (`@kapso/whatsapp-cloud-api`); business-initiated notifications must use a **Meta-approved
-  template**. Add `User.phone` + `User.whatsappNotifications` prefs + `Notification.whatsappSentAt`,
-  and have the existing outbox/digest worker dispatch WA for opted-in users behind a
-  `src/lib/whatsapp.ts` `sendWhatsApp()` abstraction. Onboarding (Aril): a Meta WABA + dedicated
-  business number + template approval + collect teammates' phone numbers/opt-in. Cost: Kapso Free
-  (~2k msgs/mo) likely covers us + Meta's small per-message utility fee. See `PLAN-notifications.md`
-  §"Phase C" for the full checklist.
+- **Phase C — WhatsApp (LIVE, v0.3.0).** Via **Kapso** (`kapso.com`) over Meta's **official
+  WhatsApp Business Cloud API** → no account-ban risk. `src/lib/whatsapp.ts`
+  `sendWhatsApp(phone, params)` POSTs a template message
+  (`POST api.kapso.ai/meta/whatsapp/v24.0/{KAPSO_PHONE_NUMBER_ID}/messages`, `X-API-Key`;
+  positional params fill `{{1}}`=actor+action+title, `{{2}}`=task link). `src/lib/whatsapp-dispatch.ts`
+  `runWhatsAppDispatch()` sends one message per unread, opted-in notification (2-min grace +
+  `Notification.whatsappSentAt` outbox marker), called from the **same cron route** as the email
+  digest. Prefs `User.phone` + `User.whatsappNotifications` at `/settings`; bulk-load via
+  `npm run db:import-phones -- <csv>`. Env: `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`,
+  `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` (default en_US). Requires a **Meta-approved
+  Utility template** and a WhatsApp Business Account with a **payment method** (to leave test mode).
+  ⚠️ When enabling the channel on existing users, backfill first
+  (`UPDATE "Notification" SET "whatsappSentAt"=now() WHERE "whatsappSentAt" IS NULL;`) so the old
+  unread backlog isn't blasted out.
