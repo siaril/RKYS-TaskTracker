@@ -18,6 +18,13 @@ export type Release = {
 // Newest first.
 export const RELEASES: Release[] = [
   {
+    version: "0.3.0",
+    date: "2026-07-02",
+    highlights: [
+      "WhatsApp notifications: get a WhatsApp message the moment you're assigned a task, @mentioned, or someone comments on a task you're assigned to or created. Add your number and switch it on in Settings.",
+    ],
+  },
+  {
     version: "0.2.0",
     date: "2026-06-25",
     highlights: [
@@ -27,7 +34,6 @@ export const RELEASES: Release[] = [
       "Take over a task with a new \"Assign to me\" button — and each task now shows who created it and who's assigned right at the top.",
       "Get notified: a bell in the top-right tells you when you're assigned a task, @mentioned, or someone comments on a task you're assigned to or created.",
       "Notifications by email too: get a periodic digest of your new notifications, with a link straight to the task. Turn it off anytime in Settings.",
-      "And on WhatsApp: get a message when you're assigned, @mentioned, or someone comments — add your number and switch it on in Settings.",
       "The board now works on your phone: each status is its own tab, and you move a task with a quick \"Move\" button instead of fiddly dragging.",
       "New Project Activity tab: see everything happening in a project — who created, moved, assigned, commented on, or deleted a task — filterable by user, task (searchable), and activity type.",
       "Dark mode: flip the sun/moon switch in the top bar. Your choice is saved to your account and follows you to any device.",
