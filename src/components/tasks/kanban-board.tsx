@@ -11,7 +11,7 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
-  closestCorners,
+  pointerWithin,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
@@ -138,7 +138,7 @@ export function KanbanBoard({
         {canEdit ? (
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={pointerWithin}
             onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveId(null)}
