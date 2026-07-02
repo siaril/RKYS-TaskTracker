@@ -41,8 +41,8 @@ Email digests and WhatsApp messages are sent by a scheduled ping to a protected 
 on the request path. Point a **free external cron** at it every ~5 minutes:
 - URL: `POST https://<your-app>/api/cron/email-digest` with header `x-cron-key: <CRON_SECRET>`
   (or `?key=<CRON_SECRET>`).
-- Use **cron-job.org** (current setup) or the committed
-  [`.github/workflows/email-digest.yml`](.github/workflows/email-digest.yml) GitHub Action.
+- Use a scheduled pinger such as **cron-job.org** (the current setup) — configure it to POST
+  the URL every 5 minutes with the `x-cron-key` header.
 - One tick runs **both** email and WhatsApp. Add `&dry=1` to preview without sending.
 
 ## 6. Done

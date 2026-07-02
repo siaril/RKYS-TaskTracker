@@ -207,8 +207,8 @@ Built in phases; all live as of v0.3.0.
   (`src/lib/email-digest.ts`) batches each opted-in user's **unread** notifications (older than
   a ~2 min grace, so an in-app read beats the email) into one email and stamps them. A
   **secret-protected** route `POST /api/cron/email-digest?key=$CRON_SECRET` (`?dry=1` to
-  preview) runs it; an external cron pings it every ~5 min (cron-job.org or the committed
-  `.github/workflows/email-digest.yml`). Pref: `User.emailNotifications` toggled at `/settings`.
+  preview) runs it; an external cron (**cron-job.org**) pings it every ~5 min. Pref:
+  `User.emailNotifications` toggled at `/settings`.
   Wording is shared with the bell via `src/lib/notification-text.ts`. Env (see CLAUDE.md):
   `SMTP_*`, `MAIL_FROM`, `APP_URL`, `CRON_SECRET`. ⚠️ SMTP only leaves Render on a **paid** web
   service (free blocks 25/465/587).

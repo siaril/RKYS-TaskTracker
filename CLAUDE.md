@@ -33,8 +33,8 @@ Built phase-by-phase (see `plan` notes); verify each phase before moving on.
     account password won't work), `MAIL_FROM` = that Gmail address.
   - `CRON_SECRET` — shared secret the digest cron must present.
   - Trigger a digest manually: `POST /api/cron/email-digest?key=<CRON_SECRET>` (add `&dry=1`
-    to preview without sending). A free external cron (cron-job.org or the committed
-    `.github/workflows/email-digest.yml`) hits it every ~5 min in prod.
+    to preview without sending). A free external cron (**cron-job.org**) hits it every ~5 min
+    in prod.
   - ⚠️ On Render, outbound SMTP only works on a **paid** web service (free blocks SMTP ports).
 - **WhatsApp notifications (Phase C — via Kapso / official Cloud API):**
   - `KAPSO_API_KEY` — Kapso project API key (Kapso dashboard → Settings → API Keys).
