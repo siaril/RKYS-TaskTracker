@@ -29,6 +29,23 @@ body {
   height: 100%;
 }
 
+/* Render native controls (date picker, scrollbars, select arrow) to match the
+   active theme — otherwise their popups stay light-on-light in dark mode. */
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+/* Chrome/Edge on Windows ignore `color-scheme` for the <select> popup list, so
+   color the options explicitly in dark mode (macOS ignores this but uses
+   color-scheme above). This makes the open dropdown dark with readable text. */
+.dark select,
+.dark option {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}
+
 body {
   background: var(--color-app);
   color: var(--color-ink);

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 import { createUser, type FormState } from "@/lib/actions/users";
+import { SelectMenu } from "@/components/select-menu";
 
 export function UserCreateForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(createUser, undefined);
@@ -34,14 +35,16 @@ export function UserCreateForm() {
           placeholder="email@rekayasa.io"
           className="h-10 flex-1 rounded-lg border border-border-strong px-3 text-sm outline-none focus:border-primary"
         />
-        <select
+        <SelectMenu
           name="role"
+          ariaLabel="Role"
           defaultValue="MEMBER"
-          className="h-10 rounded-lg border border-border-strong px-3 text-sm outline-none focus:border-primary"
-        >
-          <option value="MEMBER">Member</option>
-          <option value="ADMIN">Admin</option>
-        </select>
+          className="w-full sm:w-36"
+          options={[
+            { value: "MEMBER", label: "Member" },
+            { value: "ADMIN", label: "Admin" },
+          ]}
+        />
         <button
           type="submit"
           disabled={pending}

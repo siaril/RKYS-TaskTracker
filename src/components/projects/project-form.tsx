@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { FormState } from "@/lib/actions/projects";
+import { SelectMenu } from "@/components/select-menu";
 
 type Option = { id: string; name: string };
 type ProductOption = { id: string; name: string; color: string };
@@ -44,21 +45,14 @@ export function ProjectForm({ action, clients, products, defaults, submitLabel, 
 
       <div>
         <label className="mb-1.5 block text-sm font-semibold text-ink">Client</label>
-        <select
+        <SelectMenu
           name="clientId"
-          required
+          ariaLabel="Client"
+          placeholder="Choose a client…"
           defaultValue={defaults?.clientId ?? ""}
-          className="h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm outline-none focus:border-primary"
-        >
-          <option value="" disabled>
-            Choose a client…
-          </option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          className="w-full"
+          options={clients.map((c) => ({ value: c.id, label: c.name }))}
+        />
       </div>
 
       <div>

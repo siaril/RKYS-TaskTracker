@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import type { FormState } from "@/lib/actions/tasks";
 import { TagInput } from "@/components/tasks/tag-input";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { SelectMenu } from "@/components/select-menu";
 
 type Status = { id: string; name: string; color: string };
 type Member = { id: string; name: string | null; email: string | null };
@@ -85,47 +86,40 @@ export function TaskForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-ink">Status</label>
-          <select
+          <SelectMenu
             name="statusId"
+            ariaLabel="Status"
             defaultValue={defaults?.statusId ?? statuses[0]?.id ?? ""}
-            className={inputCls}
-          >
-            {statuses.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            options={statuses.map((s) => ({ value: s.id, label: s.name, color: s.color }))}
+          />
         </div>
 
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-ink">Priority</label>
-          <select
+          <SelectMenu
             name="priority"
+            ariaLabel="Priority"
             defaultValue={defaults?.priority ?? "MEDIUM"}
-            className={inputCls}
-          >
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="URGENT">Urgent</option>
-          </select>
+            options={[
+              { value: "LOW", label: "Low" },
+              { value: "MEDIUM", label: "Medium" },
+              { value: "HIGH", label: "High" },
+              { value: "URGENT", label: "Urgent" },
+            ]}
+          />
         </div>
 
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-ink">Assignee</label>
-          <select
+          <SelectMenu
             name="assigneeId"
+            ariaLabel="Assignee"
             defaultValue={defaults?.assigneeId ?? ""}
-            className={inputCls}
-          >
-            <option value="">Unassigned</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name ?? m.email}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: "Unassigned" },
+              ...members.map((m) => ({ value: m.id, label: m.name ?? m.email ?? "Unknown" })),
+            ]}
+          />
         </div>
 
         <div>
