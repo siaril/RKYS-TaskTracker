@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { Avatar } from "@/components/avatar";
 import { UserCreateForm } from "@/components/users/user-create-form";
+import { SelectMenu } from "@/components/select-menu";
 import { FlashToast } from "@/components/flash-toast";
 import { updateUser, setUserDisabled } from "@/lib/actions/users";
 
@@ -65,14 +66,16 @@ export default async function UsersPage({
                     maxLength={100}
                     className="h-10 flex-1 rounded-lg border border-border-strong px-3 text-sm outline-none focus:border-primary"
                   />
-                  <select
+                  <SelectMenu
                     name="role"
+                    ariaLabel="Role"
                     defaultValue={u.role}
-                    className="h-10 rounded-lg border border-border-strong px-3 text-sm outline-none focus:border-primary"
-                  >
-                    <option value="MEMBER">Member</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
+                    className="w-full sm:w-36"
+                    options={[
+                      { value: "MEMBER", label: "Member" },
+                      { value: "ADMIN", label: "Admin" },
+                    ]}
+                  />
                   <div className="flex gap-2">
                     <button
                       type="submit"

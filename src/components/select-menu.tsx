@@ -9,27 +9,64 @@ export type SelectOption = { value: string; label: string; color?: string };
 
 // A theme-aware replacement for a native <select>. Native <select> dropdown popups
 // can't be reliably dark-mode styled (Chrome on Windows ignores color-scheme and
-// <option> colors for the popup), so we render our own. The current value rides in a
-// hidden input named `name`, so it submits exactly like the <select> it replaces.
+// <option> colors for the popup), so we render our own.
+//
+// Two usage modes, combinable:
+//  - Form field: pass `name` — the current value rides in a hidden input, so it
+//    submits exactly like the <select> it replaces.
+//  - Interactive: pass `onChange` — fired with the new value *after* it commits, so a
+//    parent that auto-submits its form (via the hidden input) sees the updated value.
 export function SelectMenu({
   name,
   options,
   defaultValue,
+  onChange,
   placeholder = "Select…",
   ariaLabel,
+  disabled,
+  className,
+  triggerClassName,
 }: {
-  name: string;
+  name?: string;
   options: SelectOption[];
   defaultValue?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  disabled?: boolean;
+  className?: string; // wrapper (width/layout, e.g. "w-full", "flex-1")
+  triggerClassName?: string; // trigger button (height/text, e.g. "h-8 text-xs")
 }) {
-  const [value, setValue] = useState(defaultValue ?? options[0]?.value ?? "");
+  const [value, setValue] = useState(defaultValue ?? "");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value);
+
+  // Keep the latest onChange without making it an effect dependency (callers often pass
+  // a fresh closure each render, which would otherwise refire the effect spuriously).
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
+  // Notify the parent after the value commits (so a hidden-input form submit reads the
+  // new value). Compared against the initial value so it never fires on mount — robust
+  // to React StrictMode's double-invoked effects.
+  const initial = useRef(value);
+  useEffect(() => {
+    if (value !== initial.current) onChangeRef.current?.(value);
+  }, [value]);
+
+  // Mirror a native <select>: reset to the default when the surrounding form resets.
+  useEffect(() => {
+    const form = ref.current?.closest("form");
+    if (!form) return;
+    const onReset = () => setValue(defaultValue ?? "");
+    form.addEventListener("reset", onReset);
+    return () => form.removeEventListener("reset", onReset);
+  }, [defaultValue]);
 
   useEffect(() => {
     if (!open) return;
@@ -41,6 +78,7 @@ export function SelectMenu({
   }, [open]);
 
   function toggle() {
+    if (disabled) return;
     const next = !open;
     setOpen(next);
     if (next) setActive(Math.max(0, options.findIndex((o) => o.value === value)));
@@ -52,6 +90,7 @@ export function SelectMenu({
   }
 
   function onKeyDown(e: KeyboardEvent) {
+    if (disabled) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (!open) setOpen(true);
@@ -69,16 +108,20 @@ export function SelectMenu({
   }
 
   return (
-    <div ref={ref} className="relative">
-      <input type="hidden" name={name} value={value} />
+    <div ref={ref} className={cn("relative", className)}>
+      {name && <input type="hidden" name={name} value={value} />}
       <button
         type="button"
         onClick={toggle}
         onKeyDown={onKeyDown}
+        disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border-strong bg-surface px-3 text-sm text-ink outline-none hover:bg-app focus:border-primary"
+        className={cn(
+          "flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border-strong bg-surface px-3 text-sm text-ink outline-none hover:bg-app focus:border-primary disabled:opacity-60",
+          triggerClassName,
+        )}
       >
         <span className={cn("flex items-center gap-2 truncate", !selected && "text-muted")}>
           {selected?.color && (
@@ -95,7 +138,7 @@ export function SelectMenu({
       {open && (
         <ul
           role="listbox"
-          className="absolute left-0 z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-lg"
+          className="absolute left-0 z-50 mt-1 max-h-64 w-full min-w-max overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-lg"
         >
           {options.map((o, i) => (
             <li key={o.value || "__empty"}>

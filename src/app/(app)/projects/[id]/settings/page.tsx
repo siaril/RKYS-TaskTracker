@@ -6,6 +6,7 @@ import { getProjectAccess, atLeast } from "@/lib/access";
 import { ProjectForm } from "@/components/projects/project-form";
 import { ProductChips } from "@/components/projects/product-chips";
 import { MemberRoleSelect } from "@/components/projects/member-role-select";
+import { SelectMenu } from "@/components/select-menu";
 import { FlashToast } from "@/components/flash-toast";
 import { Avatar } from "@/components/avatar";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
@@ -167,30 +168,28 @@ export default async function ProjectSettingsPage({
             ) : (
               <form action={addMember} className="flex flex-col gap-2 sm:flex-row">
                 <input type="hidden" name="projectId" value={project.id} />
-                <select
+                <SelectMenu
                   name="userId"
-                  required
+                  ariaLabel="Add a person"
+                  placeholder="Add a person…"
                   defaultValue=""
-                  className="h-10 flex-1 rounded-lg border border-border-strong bg-surface px-3 text-sm outline-none focus:border-primary"
-                >
-                  <option value="" disabled>
-                    Add a person…
-                  </option>
-                  {addableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name ?? u.email}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  className="flex-1"
+                  options={addableUsers.map((u) => ({
+                    value: u.id,
+                    label: u.name ?? u.email ?? "Unknown",
+                  }))}
+                />
+                <SelectMenu
                   name="role"
+                  ariaLabel="Role"
                   defaultValue="EDITOR"
-                  className="h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm outline-none focus:border-primary"
-                >
-                  <option value="OWNER">Owner</option>
-                  <option value="EDITOR">Editor</option>
-                  <option value="VIEWER">Viewer</option>
-                </select>
+                  className="w-full sm:w-36"
+                  options={[
+                    { value: "OWNER", label: "Owner" },
+                    { value: "EDITOR", label: "Editor" },
+                    { value: "VIEWER", label: "Viewer" },
+                  ]}
+                />
                 <button
                   type="submit"
                   className="flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"

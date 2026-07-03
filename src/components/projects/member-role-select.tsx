@@ -1,8 +1,14 @@
 "use client";
 
+import { useRef } from "react";
+import { SelectMenu } from "@/components/select-menu";
 import type { ProjectRole } from "@/lib/access";
 
-const ROLES: ProjectRole[] = ["OWNER", "EDITOR", "VIEWER"];
+const ROLE_OPTIONS: { value: ProjectRole; label: string }[] = [
+  { value: "OWNER", label: "Owner" },
+  { value: "EDITOR", label: "Editor" },
+  { value: "VIEWER", label: "Viewer" },
+];
 
 /** A role dropdown that submits its parent form on change (no Save button). */
 export function MemberRoleSelect({
@@ -12,19 +18,20 @@ export function MemberRoleSelect({
   defaultValue: ProjectRole;
   disabled?: boolean;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
   return (
-    <select
-      name="role"
-      defaultValue={defaultValue}
-      disabled={disabled}
-      onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      className="h-8 rounded-lg border border-border-strong bg-surface px-2 text-xs font-medium text-ink outline-none focus:border-primary disabled:opacity-60"
-    >
-      {ROLES.map((r) => (
-        <option key={r} value={r}>
-          {r.charAt(0) + r.slice(1).toLowerCase()}
-        </option>
-      ))}
-    </select>
+    <div ref={ref}>
+      <SelectMenu
+        name="role"
+        ariaLabel="Member role"
+        defaultValue={defaultValue}
+        disabled={disabled}
+        options={ROLE_OPTIONS}
+        className="w-32"
+        triggerClassName="h-8 text-xs font-medium"
+        // Fires after the hidden input commits, so the form submits the new role.
+        onChange={() => ref.current?.closest("form")?.requestSubmit()}
+      />
+    </div>
   );
 }
